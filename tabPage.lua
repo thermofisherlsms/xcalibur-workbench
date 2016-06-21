@@ -39,7 +39,7 @@ local function FilterMatch(scanFilter, searchList)
   for _, search in ipairs(searchList) do
     if not scanFilter:find(search) then return false end
   end
-  print (string.format("Filter:%s Matches:%s:", scanFilter, searchList[1]))
+  --print (string.format("Filter:%s Matches:%s:", scanFilter, searchList[1]))
   return true
 end
 
@@ -131,7 +131,7 @@ function tabPage:ChangeScanNumber(args, rawFile, scanNumber, filter)
   if not filter then return targetScanNumber end
   
   -- Check if this scan matches the filter
-  print ("Looking for match at ", targetScanNumber)
+  --print ("Looking for match at ", targetScanNumber)
   local filterList = GetFilterComponents(filter)                          -- Get a list of the filter components
   local thisFilter = rawFile:GetScanFilter(targetScanNumber)              -- Get the filter for the target scan
   if FilterMatch(thisFilter, filterList) then return targetScanNumber end -- Return this scan on a match
