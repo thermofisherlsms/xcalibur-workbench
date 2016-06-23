@@ -39,3 +39,11 @@ luac.out
 *.x86_64
 *.hex
 
+User/ApexEval.lua
+User/ApexSimulations.lua
+User/Complement.lua
+User/DDStatistics.lua
+Utilities/lc.lua
+Utilities/ms.lua
+ZedGraph.XML
+User/ut_proteomeDiscoverer.lua
