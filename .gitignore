@@ -26,7 +26,7 @@ luac.out
 *.exp
 
 # Shared objects (inc. Windows DLLs)
-*.dll
+#*.dll  # Don't exclude all DLL's, just selected ones below
 *.so
 *.so.*
 *.dylib
@@ -39,6 +39,9 @@ luac.out
 *.x86_64
 *.hex
 
+# Data files
+*.raw
+
 User/ApexEval.lua
 User/ApexSimulations.lua
 User/Complement.lua
@@ -46,4 +49,6 @@ User/DDStatistics.lua
 Utilities/lc.lua
 Utilities/ms.lua
 ZedGraph.XML
+ZedGraph.dll
 User/ut_proteomeDiscoverer.lua
+LuaInterface.dll
