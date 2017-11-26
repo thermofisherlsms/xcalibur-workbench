@@ -138,14 +138,17 @@ function zPane:AddXYTable(args)
   -- I've seen some issues with this crashing when
   -- there's been .NET memory corruption
   if not pcall(function() 
-                  for i = 1, #data do
-                    curve:AddPoint(data[i][xKey], data[i][yKey])
-                  end
-                end) then
+                    for index, point in ipairs(data) do
+                      curve:AddPoint(point[xKey], point[yKey])
+                      if point.label then
+                        curve.Points[index-1].Tag = point.label
+                      end
+                    end
+                end)
+  then
     print ("Memory Error When Plotting Graph!!!!")
     return
   end
-  
   -- Set the axes
   if args.xMin then
     pane.XAxis.Scale.Min = args.xMin
