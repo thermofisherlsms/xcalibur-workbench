@@ -49,6 +49,7 @@
 -- reason to keep it local here
 luannet = require ("luanet")
 
+
 -- Load the primary assembly here to make them available
 -- for all other items started with "require"
 luanet.load_assembly ("System.Windows.Forms")
@@ -91,12 +92,12 @@ local function AddCommandBar()
   panel.Dock = DockStyle.Bottom
   panel.AutoSize = true
   mainForm.Controls:Add(panel)
-  
+
   comboBox = ComboBox()
   comboBox.DropDownStyle = DropDownStyle.DropDown
   comboBox.Dock = DockStyle.Bottom
   panel.Controls:Add(comboBox)
-  
+
   local button = Button()
   button.Text = "Execute"
   button.Dock = DockStyle.Left
@@ -155,7 +156,7 @@ local function LoadLuaCB(sender, args)
   -- with LuaJIT as the interpreter.  Lord Google suggested setting the ShowHelp
   -- property to resolve it.  Unbelievable, but it works
   dialog.ShowHelp = true                                              -- Workaround for dialog not being visible
-  
+
   local result = dialog:ShowDialog()                                  -- Show modal dialog
   if result == DialogResult.OK then
     -- Load Lua files one by one through the console
@@ -184,6 +185,7 @@ local function LoadOtherFiles(directory)
 		table.insert(files, fileName)
 	end
   for index, fileName in ipairs(files) do
+    print ("Loading file: ", fileName)
     dofile(directory .. fileName)
   end
 end
@@ -196,7 +198,7 @@ local function OpenCB(sender, args)
   -- with LuaJIT as the interpreter.  Lord Google suggested setting the ShowHelp
   -- property to resolve it.  Unbelievable, but it works
   dialog.ShowHelp = true                                              -- Workaround for dialog not being visible
-  
+
   local result = dialog:ShowDialog()                                  -- Show modal dialog
   if result == DialogResult.OK then
     -- Create a new notebook using the default template
@@ -235,7 +237,7 @@ end
 local function SetUpMenu()
   -- Attach the menu to the form
   mainForm.Menu = menu.mainMenu
-  
+
   -- Create some menus, and add them to the main menu.
   menu.AddMenu({name = "File", label = "&File"})
   menu.AddMenu({name = "Edit"})
@@ -243,7 +245,7 @@ local function SetUpMenu()
   local mdiMenu = menu.AddMenu({name = "Windows"})
   mdiMenu.MdiList = true                                  -- Set MDI flag
   menu.AddMenu({name = "Help", label = "&Help"})
-  
+
   -- Add menu items to File
   menu.AddMenu({name = "Open", label = "&Open...", parentName = "File", callBack = OpenCB})
   menu.AddMenu({name = "Templates", parentName = "File"})
@@ -252,15 +254,15 @@ local function SetUpMenu()
   menu.AddMenu({name = "Sep2", label = "-", parentName = "File"})
   menu.AddMenu({name = "Load", label = "Load Lua...", parentName = "File", callBack = LoadLuaCB})
   menu.AddMenu({name = "Exit", label = "E&xit", parentName = "File", callBack = ExitCB})
-  
+
   -- Add menu items to Edit
   menu.AddMenu({name = "Undo", label = "Undo", parentName = "Edit", callBack = UndoCB,
                   shortCut = Shortcut.CtrlZ})
   menu.AddMenu({name = "Properties", label = "Properties...", parentName = "Edit", callBack = PropertiesCB})
-  
+
   -- Add menu items to Tools
   menu.AddMenu({name = "ZBS Console", parentName = "Tools", callBack = ConsoleCB})
-  
+
   -- Add menu items to Windows
   menu.AddMenu({name = "Cascade", parentName = "Windows", callBack = CascadeCB})
   menu.AddMenu({name = "Tile Horizontal", parentName = "Windows", callBack = TileHorizontalCB})
@@ -317,6 +319,14 @@ LoadOtherFiles(configure.userDirectory)
 -- queue with Application.Run()
 mainForm.Visible = true
 mainForm:Show()
+
+-- Load files if passed as arguments
+local fileNumber = 1
+while arg[fileNumber] do
+  -- Create a new notebook using the default template
+  mdiNoteBook({fileName = arg[fileNumber], addPages = templates.default.AddPages})
+  fileNumber = fileNumber + 1
+end
 
 -- Start the Message Queue with a pcall, using anonymous function syntax
 local success, result = pcall (function() Application.Run(mainForm); return true end)
