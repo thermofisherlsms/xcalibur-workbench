@@ -217,4 +217,25 @@ function mdiNoteBook:OpenFile(fileName)
   return true
 end
 
+-- The following are not meant to be part of the mdiNoteBook object
+-- but are instead ways to access the active objects.  Thus they
+-- use "." notation instead of ":" notation, but can be called either way.
+function mdiNoteBook.GetActiveNoteBook()
+  return noteBookList.active
+end
+
+function mdiNoteBook.GetActivePage()
+  local activeNotebook = mdiNoteBook.GetActiveNoteBook()
+  if not activeNotebook then return false end
+  return activeNotebook.pageList.active
+end
+
+function mdiNoteBook.GetActivePane()
+  local activePage = mdiNoteBook.GetActivePage()
+  if not activePage then return false end
+  -- Not all pages have panes
+  if not activePage.paneList then return false end
+  return activePage.paneList.active
+end
+
 return mdiNoteBook
