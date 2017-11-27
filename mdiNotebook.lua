@@ -214,6 +214,15 @@ function mdiNoteBook:OpenFile(fileName)
     print ("Unable to open " .. self.rawFile)
     return nil
   end
+  self.fullFileName = fileName
+  -- Find a backslash followed by anthing other than a backslash,
+  -- right before the end of the string
+  local index = string.find(fileName, "\\[^\\]*$")
+  if index then
+    self.pathName = string.sub(fileName, 1, index)
+    self.fileName = string.sub(fileName, index + 1)
+  end
+    
   return true
 end
 
