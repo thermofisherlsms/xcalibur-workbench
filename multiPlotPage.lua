@@ -77,6 +77,8 @@ function multiPlotPage:_init(args)
   end
   self.plotControl:AxisChange()
   if #self.paneList > 1 then
+    -- If there's more than one pane, but no formatting, just format in one column
+    if not args.rows and not args.columns then args.rows = #self.paneList end
     self:SetLayout(args.rows, args.columns)
   end
 end
