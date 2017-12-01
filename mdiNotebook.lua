@@ -82,7 +82,7 @@ function mdiNoteBook:_init(args)
   end
   
   -- Add pages if function is provided
-  if args.addPages then args.addPages(self) end
+  if args.AddPages then args.AddPages(self) end
   self.form:Show()
 end
 
@@ -137,8 +137,8 @@ function mdiNoteBook:CreateForm(args)
   mdiForm.Activated:Add(mdiNoteBook.ActivatedCB)
   mdiForm.Closed:Add(mdiNoteBook.ClosedCB)
   mdiForm.Text = self:GetFormTitle(args)
-  mdiForm.Height = 0.65 * mainForm.Height
-  mdiForm.Width = 0.65 * mainForm.Width
+  mdiForm.Height = args.height or 0.8 * mainForm.Height
+  mdiForm.Width = args.width or 0.8* mainForm.Width
   mdiForm.Tag = self                                -- Set tag for referencing in callback
   self.form = mdiForm
   

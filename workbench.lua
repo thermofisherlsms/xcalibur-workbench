@@ -69,6 +69,7 @@ local ComboBox = luanet.import_type("System.Windows.Forms.ComboBox")
 local Panel = luanet.import_type("System.Windows.Forms.Panel")
 local Button = luanet.import_type("System.Windows.Forms.Button")
 local OpenDialog = luanet.import_type("System.Windows.Forms.OpenFileDialog")
+local Screen = luanet.import_type("System.Windows.Forms.Screen")
 
 -- Get enumerations
 local AnchorStyle = luanet.import_type("System.Windows.Forms.AnchorStyles")
@@ -202,9 +203,13 @@ local function OpenCB(sender, args)
   local result = dialog:ShowDialog()                                  -- Show modal dialog
   if result == DialogResult.OK then
     -- Create a new notebook using the default template
+    local args = {}
+    for key, value in pairs(templates.default) do
+        args[key] = value
+    end
     for i = 1, dialog.FileNames.Length do
-      mdiNoteBook({fileName = dialog.FileNames[i-1],                  -- Use base-0 indexing here
-                  addPages = templates.default.AddPages})
+      args.fileName = dialog.FileNames[i-1]                           -- Use base-0 indexing here
+      mdiNoteBook(args)
       Application.DoEvents()                                          -- Process the message queue so files are shown
     end
   end
@@ -305,8 +310,11 @@ mainForm.Closing:Add(ClosingCB)
 --mainForm.AllowDrop = true
 --mainForm.DragDrop:Add(DragDropCB)
 templates.InitializeTemplates()
-mainForm.Height = 600
-mainForm.Width = 800
+-- Set to eat up a bunch of the screen
+local workingArea = Screen.FromControl(mainForm).WorkingArea
+mainForm.Height = workingArea.Height * 0.8
+mainForm.Width = workingArea.Width * 0.8
+
 AddCommandBar()
 -- Users can load the utilities with require()
 -- This will make sure they are found by the search path

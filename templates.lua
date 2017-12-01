@@ -35,6 +35,9 @@ templates.templateList = {}
 -- List of templates
 local p2g = {}
 p2g.name = "p2g"
+-- Include these lines if you want to use a fixed size for the notebook
+--p2g.height = 800
+--p2g.width = 1000
 function p2g.AddPages(noteBook)
   local multi = multiPlotPage{name = "Multi",
                                 panes = {msPane({rawFile = noteBook.rawFile}),
