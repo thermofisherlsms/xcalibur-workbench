@@ -332,7 +332,7 @@ mainForm:Show()
 local fileNumber = 1
 while arg[fileNumber] do
   -- Create a new notebook using the default template
-  mdiNoteBook({fileName = arg[fileNumber], addPages = templates.default.AddPages})
+  mdiNoteBook({fileName = arg[fileNumber], AddPages = templates.default.AddPages})
   fileNumber = fileNumber + 1
 end
 
