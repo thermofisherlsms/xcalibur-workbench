@@ -109,7 +109,7 @@ function statusPage:GetPropertyTitle()
 end
 
 function statusPage:SetPropertiesFinalize()
-  self:ShowHeader()
+  self:ShowStatus()
 end
 
 function statusPage:ShowStatus(args)
