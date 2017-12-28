@@ -19,7 +19,7 @@
 -- Load necessary libraries
 local templates = require("templates")
 
-local RawFile = require("ThermoRawFile")
+local RawFile = require("LuaRawFile")
 
 -- Get assemblies
 
