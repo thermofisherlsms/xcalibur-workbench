@@ -137,11 +137,11 @@ function zPane:AddXYTable(args)
   -- I'm going to pcall the section here because
   -- I've seen some issues with this crashing when
   -- there's been .NET memory corruption
-  if not pcall(function() 
+  if not pcall(function()
                     for index, point in ipairs(data) do
                       curve:AddPoint(point[xKey], point[yKey])
                       if point.label then
-                        curve.Points[index-1].Tag = point.label
+                        curve.Points[index-1].Tag = tostring(point.label)
                       end
                     end
                 end)
