@@ -19,6 +19,7 @@ local Color = luanet.import_type("System.Drawing.Color")
 local configure = {
   chromatogramColor = Color.Blue,
   spectrumColor = Color.Black,
+  tartareDirectory = [[.\Tartare]],
   userDirectory = [[.\User]],
   utilityDirectory = [[.\Utilities]],
   }

@@ -28,6 +28,7 @@ local chromatogramPage = require("chromatogramPage")
 local statusPage = require("statusPage")
 local tunePage = require("tunePage")
 local methodPage = require("methodPage")
+local errorPage = require("errorPage")
 
 templates = {}
 templates.templateList = {}
@@ -79,6 +80,9 @@ function big.AddPages(noteBook)
   
   local method = methodPage{name = "Method", rawFile = noteBook.rawFile}
   noteBook:AddPage(method)
+  
+  local errorLog = errorPage{name = "Error Log", rawFile = noteBook.rawFile}
+  noteBook:AddPage(errorLog)
 end
 
 -- Template Methods

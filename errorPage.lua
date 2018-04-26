@@ -1,4 +1,4 @@
--- Copyright (c) 2016 Thermo Fisher Scientific
+-- Copyright (c) 2018 Thermo Fisher Scientific
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files
 -- (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify,
@@ -12,12 +12,11 @@
 -- FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 -- CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
--- trendPage.lua
--- a plotPage with the ability to plot trends
+-- errorPage.lua
+-- a textPage with the ability to display the error log
 
 -- Load necessary libraries
-local trendPane = require("trendPane")
-local multiPlotPage = require("multiPlotPage")
+local textPage = require("textPage")
 
 -- Get assemblies
 
@@ -27,38 +26,45 @@ local multiPlotPage = require("multiPlotPage")
 
 -- local variables
 
--- forward declarations for local functions
+-- Forward declaration for local helper functions
 
 -- local functions
 
--- Start of plotPage Object
-local trendPage = {}
-trendPage.__index = trendPage
-setmetatable(trendPage, {
-    __index = multiPlotPage,    -- this is the inheritance
+-- Start of errorPage Object
+local errorPage = {}
+errorPage.__index = errorPage
+setmetatable(errorPage, {
+    __index = textPage,    -- this is the inheritance
     __call = function(cls, ...)
       local self = setmetatable({}, cls)
       self:_init(...)
       return self
     end, })
 
-function trendPage:_init(args)
+function errorPage:_init(args)
   args = args or {}
-  args.panes = {trendPane(args)}
-  args.rows = 1
-  args.columns = 1
-  multiPlotPage._init(self, args)
+  textPage._init(self, args)
+  local textBox = self.textControl
+  self.rawFile = args.rawFile
+
+  if not args.skipInit then self:ShowErrorLog() end
 end
 
-function trendPage:Plot(args)
-  local pane = self.paneList.active
-  if not pane then return end
-  return pane:Plot(args)
+function errorPage:ShowErrorLog(args)
+  args = args or {}
+  if not self.rawFile then
+    print ("No rawFile available")
+    return nil
+  end
+  local rawFile = self.rawFile
+  local errorCount = rawFile:GetNumErrorLog()
+  local errorLog = ""
+  for i = 0, errorCount - 1 do
+    local errorItem = rawFile:GetErrorLogItem(i)
+    errorLog = errorLog .. rawFile:GetErrorLogItem(i) .. "\r\n"
+  end
+  
+  self:Fill(errorLog)
 end
 
--- This overrides the default method
-function trendPage:SetProperties()
-  return self.paneList.active:SetProperties()
-end
-
-return trendPage
+return errorPage

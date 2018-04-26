@@ -83,6 +83,7 @@ function trendPane:IsTrailer(label)
 end
 
 function trendPane:Plot(label)
+  label = label or self.label
   local rf = self.rawFile
   if self:IsHeader(label) then
     return self:PlotGeneric(label, rf.GetScanHeader)
@@ -100,13 +101,22 @@ function trendPane:PlotGeneric(label, accessFunction)
   local rf = self.rawFile
   local xyData = {}
   local header
+  local scanFilter = self.filter or ""
+  if scanFilter:len() > 0 then
+    scanFilter = " " .. scanFilter .. " "
+  else
+    scanFilter = nil
+  end
   for i = rf.FirstSpectrumNumber, rf.LastSpectrumNumber do
-    data = accessFunction(rf, i)
-    if not data[label] then
-      print (string.format("Label '%s' not found for scan %d", label, i))
-      return nil
+    if not scanFilter or
+    string.find(rf:GetScanFilter(i), scanFilter) then  
+      data = accessFunction(rf, i)
+      if not data[label] then
+        print (string.format("Label '%s' not found for scan %d", label, i))
+        return nil
+      end
+      table.insert(xyData, {x = rf:GetRetentionTime(i), y = data[label]})
     end
-    table.insert(xyData, {x = rf:GetRetentionTime(i), y = data[label]})
   end
   local pane = self.paneControl
   self:Clear()                                        -- Clear all data from the pane
@@ -146,6 +156,11 @@ function trendPane:PlotStatus(label)
   self:AddXYTable({data = xyData, xKey = "x", yKey = "y"})
   self.label = label
   return true
+end
+
+-- This overrides the default method
+function trendPane:SetPropertiesFinalize()
+  self:Plot()
 end
 
 return trendPane

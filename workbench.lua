@@ -24,9 +24,6 @@
 --  Bind to a Notebook
 -- Data page
 -- Save Notebook and Restore Notebook
--- * Generate chromatogram from MS
---    Drag does specified width
--- * Generate MS from chromatogram
 --    Allow drag for averaging spectra
 --    Add marker to most recently clicked point
 -- Utilities
@@ -78,6 +75,7 @@ local DropDownStyle = luanet.import_type("System.Windows.Forms.ComboBoxStyle")
 local DialogResult = luanet.import_type("System.Windows.Forms.DialogResult")  -- Get the enumeration
 local MdiLayout = luanet.import_type("System.Windows.Forms.MdiLayout")
 local Shortcut = luanet.import_type("System.Windows.Forms.Shortcut")
+local FormStartPosition = luanet.import_type("System.Windows.Forms.FormStartPosition")
 
 -- local variables
 local comboBox
@@ -320,11 +318,13 @@ AddCommandBar()
 -- This will make sure they are found by the search path
 package.path = package.path .. ";".. configure.utilityDirectory .. "/?.lua"
 LoadOtherFiles(configure.userDirectory)
+LoadOtherFiles(configure.tartareDirectory)
 
 -- Calling mainForm:ShowDialog() does not reliably show the form.
 -- This appears to be related to the form being a Mdi Parent.  To
 -- get the form started reliably, show it then start the message
 -- queue with Application.Run()
+mainForm.StartPosition = FormStartPosition.CenterScreen
 mainForm.Visible = true
 mainForm:Show()
 

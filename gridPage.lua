@@ -67,4 +67,13 @@ function gridPage:Fill(data)
   end
 end
 
+-- Fill Row Header with table data
+function gridPage:FillHeaderRow(header)
+  local grid = self.gridControl
+  grid.ColumnCount = #header
+  for columnIndex, value in ipairs(header) do
+    grid.Columns[columnIndex-1].HeaderCell.Value = value
+  end
+end
+
 return gridPage

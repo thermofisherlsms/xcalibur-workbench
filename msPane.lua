@@ -69,7 +69,7 @@ function msPane:_init(args)
   zPane._init(self, args)
   self.mode = args.mode or "tic"
   self.rawFile = args.rawFile
-  self.scanNumber = 1
+  self.scanNumber = args.scanNumber or 1
   self.startRT = 0
   self.stopRT = 1
   self.filter = ""
