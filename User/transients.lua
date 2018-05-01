@@ -1,7 +1,11 @@
 -- transients.lua
 -- routines for extracting transients from data files
 -- This requires LuaJIT
-local ffi = require("ffi")
+-- Bail out if FFI library is not available.
+local ffi
+if not pcall (function() ffi = require("ffi") end) then return end
+-- Bail out if complex global from GSLShell is not available.
+if not complex then return end
 
 local transients = {}
 
