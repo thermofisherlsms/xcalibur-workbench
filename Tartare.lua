@@ -27,6 +27,7 @@ local FolderBrowserDialog = luanet.import_type("System.Windows.Forms.FolderBrows
 local ProgressBar = luanet.import_type("System.Windows.Forms.ProgressBar")
 local Form = luanet.import_type("System.Windows.Forms.Form")
 local Label = luanet.import_type("System.Windows.Forms.Label")
+local CheckedListBox = luanet.import_type("System.Windows.Forms.CheckedListBox")
 
 -- Get enumerations
 local DialogResult = luanet.import_type("System.Windows.Forms.DialogResult")
@@ -35,36 +36,90 @@ local ContentAlignment = luanet.import_type("System.Drawing.ContentAlignment")
 local FormStartPosition = luanet.import_type("System.Windows.Forms.FormStartPosition")
 
 -- forward declarations for local functions
-local MenuCheck, ProcessList, ShowMenu
+local MenuCheck, ProcessList, ShowMenu, TrueFunction
 
 -- Local variables
 local cycleNumber = 1
+local activeReportDialog = {}
 local progressDialog = {}
 local cancelProcessing = false
-local modulesName = "Modules"
 local registeredReports = {}
 
 -- Create the table for the Tartare module
 -- It has one public function, which is register()
 local Tartare = {}
 
+-- Make a bin averaged plot of supplied data
+-- Normally used to average over retention time
+function Tartare.averagePlot(args)
+  args = args or {}
+  if not args.pane or not args.data or not args.yKey then
+    print ("Usage: Tartare.averagePlot({data = dataTable, pane = zPane, yKey = string, [xKey = string, averageWidth = x, filterFunction = function]})")
+    return nil
+  end
+  local pane = args.pane
+  local data = args.data
+  local yKey = args.yKey
+  local xKey = args.xKey or "rt"              -- Retention tme is default
+  local averageWidth = args.averageWidth or 1 -- RT is in minutes
+  local filterFunction = args.filterFunction or TrueFunction
+  
+  for fileIndex, result in ipairs(data) do
+    -- Make Time Plot Data Table
+    local plotData = {}
+    local sum = 0
+    local count = 0
+    local nextPoint = averageWidth
+    local lastEntry = result[1]
+    for _, entry in ipairs(result) do
+      if filterFunction(entry) then
+        if lastEntry[xKey] > entry[xKey] then
+          print (string.format("tartare:averagePlot(): Data must be sorted on key '%s'", xKey))
+          return
+        end
+        if entry[xKey] > nextPoint then
+          if count > 0 then
+            table.insert(plotData, {x = entry[xKey], y = sum / count})
+          end
+          nextPoint = entry[xKey] + averageWidth
+          sum = 0
+          count = 0
+        end
+        sum = sum + entry[yKey]
+        count = count + 1
+      end
+    end
+    -- Include the last time window
+    if count > 0 then
+      table.insert(plotData, {x = nextPoint, y = sum / count})
+    end
+    -- Plot the data
+    pane:AddXYTable({data = plotData, xKey = "x", yKey = "y",
+                    index = fileIndex, name = result.fileName})
+    Application.DoEvents()
+  end
+end
+
 -- Make a histogram plot of supplied data
 function Tartare.histogram(args)
   args = args or {}
   if not args.pane or not args.data or not args.key then
-    print ("Usage: Tartare.histogram({data = dataTable, pane = zPane, key = string})")
+    print ("Usage: Tartare.histogram({data = dataTable, pane = zPane, key = string [, filterFunction = function})")
     return nil
   end
   local pane = args.pane
   local data = args.data
   local key = args.key
+  local filter = args.filterFunction or TrueFunction
   local maxValue = args.maxValue or -1
   local minValue = args.minValue or 1e10
   if maxValue == -1 then
     for _, result in ipairs(data) do
       for _, entry in ipairs(result) do
-        maxValue = math.max(maxValue, entry[key])
-        minValue = math.min(minValue, entry[key])
+        if filter(entry) then
+          maxValue = math.max(maxValue, entry[key])
+          minValue = math.min(minValue, entry[key])
+        end
       end
     end
   end
@@ -73,6 +128,15 @@ function Tartare.histogram(args)
     minValue = math.log10(minValue)
   end
   local xRange = maxValue - minValue
+  -- Special case of everything in one bin
+  if xRange == 0 then
+    if minValue == 0 then
+      maxValue = 1
+    else
+      minValue = 0
+    end
+    xRange = maxValue - minValue
+  end
   
   local binCount
   if args.integer then
@@ -90,16 +154,19 @@ function Tartare.histogram(args)
       table.insert(histData, {x = xValue, count = 0})
     end
     for _, entry in ipairs(result) do
-      -- Add one because of zero bin in first position
-      local value = entry[key]
-      if args.logScale then value = math.log10(value) end
-      local binIndex = math.ceil((value - minValue) / xRange * binCount) + 1
-      if not histData[binIndex] then
-        print (string.format("Bin Count: %d Bad Index: %d", #histData, binIndex))
-        print (string.format("MinValue: %f MaxValue: %f", minValue, maxValue))
-        print (string.format("This Value: %f XRange: %f", value, xRange))
+      if filter(entry) then
+        -- Add one because of zero bin in first position
+        local value = entry[key]
+        if args.logScale then value = math.log10(value) end
+        local binIndex = math.ceil((value - minValue) / xRange * binCount) + 1
+        if not histData[binIndex] then
+          print (string.format("Bin Count: %d Bad Index: %d", #histData, binIndex))
+          print (string.format("MinValue: %f MaxValue: %f", minValue, maxValue))
+          print (string.format("This Value: %f XRange: %f", value, xRange))
+          return
+        end
+        histData[binIndex].count = histData[binIndex].count + 1
       end
-      histData[binIndex].count = histData[binIndex].count + 1
     end
     -- Remove empty bins
     local i = 1
@@ -139,62 +206,85 @@ function Tartare.register(reportTable)
   table.insert(registeredReports, reportTable)
   
   -- Add this report to the modules sub-menu
-  reportTable.menuItem = menu.AddMenu({name = reportTable.name, parentName = modulesName, callBack = MenuCheck})
   -- Careful of the syntax here, we want nil to show up enabled
-  if reportTable.enabled ~= false then
-    reportTable.menuItem.Checked = true
-  end
+  if reportTable.enabled ~= false then reportTable.enabled = true end
+  local items = activeReportDialog.listBox.Items
+  items:Add(reportTable.name, reportTable.enabled)
   
   return true
 end
 
--- Make a time plot of supplied data
-function Tartare.timePlot(args)
-  args = args or {}
-  if not args.pane or not args.data or not args.key then
-    print ("Usage: Tartare.timePlot({data = dataTable, pane = zPane, key = string})")
-    return nil
+-- Reset to prior values
+local function ActiveCancelCB()
+  for index, reportTable in ipairs(registeredReports) do
+    activeReportDialog.listBox:SetItemChecked(index-1, reportTable.enabled)
   end
-  local pane = args.pane
-  local data = args.data
-  local key = args.key
-  local averageTime = args.averageTime or 1 -- RT is in minutes
-  
-  for fileIndex, result in ipairs(data) do
-    -- Make Time Plot Data Table
-    local timeData = {}
-    local sum = 0
-    local count = 0
-    local nextTime = averageTime
-    for _, entry in ipairs(result) do
-      if entry.rt > nextTime then
-        if count > 0 then
-          table.insert(timeData, {x = nextTime, y = sum / count})
-        end
-        nextTime = nextTime + averageTime
-        sum = 0
-        count = 0
-      end
-      sum = sum + entry[key]
-      count = count + 1
-    end
-    -- Include the last time window
-    if count > 0 then
-      table.insert(timeData, {x = nextTime, y = sum / count})
-    end
-    -- Plot the data
-    pane:AddXYTable({data = timeData, xKey = "x", yKey = "y",
-                    index = fileIndex, name = result.fileName})
-    Application.DoEvents()
+  activeReportDialog.form:Hide()
+end
+
+-- Fetech new active reports
+local function ActiveOKCB()
+  for index, reportTable in ipairs(registeredReports) do
+    reportTable.enabled = activeReportDialog.listBox:GetItemChecked(index-1)
   end
+  activeReportDialog.form:Hide()
 end
 
 local function CancelCB()
   cancelProcessing = true
 end
 
+local function CreateActiveReportDialog()
+  -- Create a dialog
+  local form = Form()
+  activeReportDialog.form = form
+  form.Text = "Tartare Modules"
+  form.Width = 300
+  form.Height = 400
+  form.StartPosition = FormStartPosition.CenterScreen
+  
+  -- Add label
+  local label = Label()
+  label.Parent = form
+  label.Left = 0
+  label.Top = 10
+  label.Height = 20
+  label.Width = form.Width
+  label.TextAlign = ContentAlignment.MiddleCenter
+  label.Text = "Active Modules"
+  
+  -- Add CheckedListBox
+  local listBox = CheckedListBox()
+  activeReportDialog.listBox = listBox
+  listBox.Parent = form
+  listBox.Top = 35
+  listBox.Height = 300
+  listBox.Width = 260
+  listBox.Left = 10
+  listBox.ThreeDCheckBoxes = true
+  listBox.IntegralHeight = true
+  
+  -- Add the OK Button
+  local okButton = Button()
+  okButton.Text = "OK"
+  okButton.Left = 60
+  okButton.Width = 80
+  okButton.Top = 330
+  okButton.Click:Add(ActiveOKCB)
+  okButton.Parent = form
+  
+  -- Add the Cancel Button
+  local cancelButton = Button()
+  cancelButton.Text = "Cancel"
+  cancelButton.Left = 160
+  cancelButton.Width = 80
+  cancelButton.Top = 330
+  cancelButton.Click:Add(ActiveCancelCB)
+  cancelButton.Parent = form
+end
+
 local function CreateProgressDialog()
-  -- Create a modal dialog
+  -- Create a dialog
   local form = Form()
   form.Text = "Tartare Progress"
   form.Width = 400
@@ -251,40 +341,6 @@ function MenuCheck(sender, event)
   sender.Checked = not sender.Checked
 end
 
-local function OnDirectory()
-  --[[
-  local dialog = FolderBrowserDialog()                                -- Create the dialog
-  dialog.Description = "Tartare Folder Selector"
-  print ("Attemping ShowDialog()")
-  -- For some reason, this call hangs without showing the dialog
-  -- I could not find anything on Google that would explain how to fix this
-  local result = dialog:ShowDialog()                                  -- Show modal dialog
-  if result ~= DialogResult.OK then return end
-  local directory = dialog.SelectedPath
-  print ("Directory: ", directory)
-  dialog:Dispose()
-  --]]
-  -- This was suggested on the web, and it works, but is confusing
-  -- because the user must know to go into the directory then click open
-  -- without selecting a file
-  local dialog = OpenDialog()                                         -- Create the dialog
-  dialog.ValidateNames = false
-  dialog.CheckFileExists = false
-  dialog.CheckPathExists = true
-  dialog.FileName = "Folder Selection."
-  -- Due to some .NET anomoly, the file dialog will not show up when running
-  -- with LuaJIT as the interpreter.  Lord Google suggested setting the ShowHelp
-  -- property to resolve it.  Unbelievable, but it works
-  dialog.ShowHelp = true                                              -- Workaround for dialog not being visible
-
-  local result = dialog:ShowDialog()                                  -- Show modal dialog
-  if result == DialogResult.OK then
-    print ("Dialog returned OK")
-  end
-  dialog:Dispose()
-  --ProcessList(rawFileList)
-end
-
 local function OnFiles()
   local dialog = OpenDialog()                                         -- Create the dialog
   dialog.Filter = "Raw files (*.raw)|*.raw|All files (*.*)|*.*"       -- Set the filter
@@ -319,18 +375,26 @@ end
 
 -- This function has a forward declaration
 function ProcessList(list)
-  progressDialog.form:Show()
-  progressDialog.bar.Maximum = #list * #registeredReports
-  progressDialog.bar.Value = 0
-  Application.DoEvents()
+  local startTime = os.time()
   
   --Create list of active reports
   local activeReports = {}
+  local spectrumReports = {}
   for _, report in ipairs(registeredReports) do
-    if report.menuItem.Checked then
+    if report.enabled then
       table.insert(activeReports, report)
+      if report.wantsLabelData or report.wantsSpectrum then
+        table.insert(spectrumReports, report)
+      end
     end
   end
+  
+  progressDialog.form:Show()
+  local processSteps = #list * (#activeReports + 1)   -- Add one for spectrum processing step
+  local step = 1
+  progressDialog.bar.Maximum = processSteps
+  progressDialog.bar.Value = 0
+  Application.DoEvents()
   
   -- Process the files
   for fileIndex, item in ipairs(list) do
@@ -366,9 +430,9 @@ function ProcessList(list)
     end
     
     -- Loop through and have each report process this raw file
-    for step, report in ipairs(activeReports) do
-      local processText = string.format("%s Step %d of %d", report.name,
-                        (fileIndex-1) * #activeReports + step, #activeReports * #list)
+    for _, report in ipairs(activeReports) do
+      local processText = string.format("%s Step %d of %d", report.name, step, processSteps)
+      step = step + 1
       progressDialog.processLabel.Text = processText
       Application.DoEvents()
       report.processFile(item.rawFileObject, shortFileName, fileIndex == 1)
@@ -376,6 +440,46 @@ function ProcessList(list)
       Application.DoEvents()
       if cancelProcessing then break end
     end
+    
+    -- Now loop through and run reports that require spectral data or label data
+    -- Only fetch spectra or label data if required by the routine, and then share
+    -- that spectrum instead of fetching multiple times
+    if #spectrumReports > 0 then
+      progressDialog.processLabel.Text = "Processing Spectra"
+      Application.DoEvents()
+      local rf = item.rawFileObject
+      for scanNumber = rf.FirstSpectrumNumber, rf.LastSpectrumNumber do
+        if scanNumber % 200 == 0 then
+          Application.DoEvents()
+          if cancelProcessing then break end
+        end
+        if scanNumber % 5000 == 0 then
+          progressDialog.processLabel.Text = string.format("Processing Spectra %d of %d", scanNumber, rf.LastSpectrumNumber)
+          Application.DoEvents()
+        end
+          
+        local spectrum, labelData
+        local description = {scanNumber = scanNumber, fineNumber = fileIndex}
+        description.order = rf:GetMSNOrder(scanNumber)
+        description.filter = rf:GetScanFilter(scanNumber)
+        for _, report in ipairs(spectrumReports) do
+          if report.wantsSpectrum and report.wantsSpectrum(description) then
+            if not spectrum then spectrum = rf.GetSpectrum(scanNumber) end
+            if spectrum then report.processSpectrum(spectrum, description) end
+          end
+          -- Now repeat for label data
+          if report.wantsLabelData and report.wantsLabelData(description) then
+            if not labelData then labelData = rf:GetLabelData(scanNumber) end
+            if labelData then report.processLabelData(labelData, description) end
+          end
+        end
+      end
+    end
+    step = step + 1
+    progressDialog.bar:PerformStep()
+    Application.DoEvents()
+
+    -- Close the raw file if we opened it
     if item.needToClose then item.rawFileObject:Close() end
   end
   progressDialog.processLabel.Text = ""
@@ -389,10 +493,18 @@ function ProcessList(list)
   
   --Generate the notebook pages for the reports
   local resultNotebook = mdiNoteBook({title = string.format("Tartare #%d", cycleNumber)})
+  resultNotebook.tabControl.ShowToolTips = true
   cycleNumber = cycleNumber + 1
   for _, report in ipairs(registeredReports) do
     report.generateReport(resultNotebook)
   end
+  local runTime = os.time() - startTime
+  print (string.format("Run time (sec): %0.1f", runTime))
+end
+
+
+local function ShowDialog()
+  activeReportDialog.form:Show()
 end
 
 -- This function has a forward declaration
@@ -402,13 +514,16 @@ function ShowMenu()
   menu.AddMenu({name = thisParentName, parentName = "Tools"})   -- Add submenu to Tools
   menu.AddMenu({name = "All Notebooks", parentName = thisParentName, callBack = OnNotebooks})
   menu.AddMenu({name = "Files ...", parentName = thisParentName, callBack = OnFiles})
-  -- This doesn't work right so not allowing it as an option
-  --menu.AddMenu({name = "Directory ...", parentName = thisParentName, callBack = OnDirectory})
-  menu.AddMenu({name = modulesName, parentName = thisParentName})
+  menu.AddMenu({name = "Active Reports ...", parentName = thisParentName, callBack = ShowDialog})
 end
 
-CreateProgressDialog()
+-- This function has a forward declaration
+function TrueFunction()
+  return true
+end
 
+CreateActiveReportDialog()
+CreateProgressDialog()
 
 -- Return the module
 return Tartare

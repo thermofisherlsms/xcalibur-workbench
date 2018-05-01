@@ -49,6 +49,26 @@ function p2g.AddPages(noteBook)
   noteBook:AddPage(header)
 end
 
+local midsize = {}
+midsize.name = "midsize"
+function midsize.AddPages(noteBook)
+  local multi = multiPlotPage{name = "Multi",
+                                panes = {msPane({rawFile = noteBook.rawFile}),
+                                          msPane({rawFile = noteBook.rawFile, mode = "spectrum"})},
+                                rows = 2}
+  noteBook:AddPage(multi)
+  local header = headerPage{name = "Scan Header", rawFile = noteBook.rawFile}
+  noteBook:AddPage(header)
+  local status = statusPage{name = "Status", rawFile = noteBook.rawFile}
+  noteBook:AddPage(status)
+  local tune = tunePage{name = "Tune", rawFile = noteBook.rawFile}
+  noteBook:AddPage(tune)
+  local method = methodPage{name = "Method", rawFile = noteBook.rawFile}
+  noteBook:AddPage(method)
+  local errorLog = errorPage{name = "Error Log", rawFile = noteBook.rawFile}
+  noteBook:AddPage(errorLog)
+end
+
 local big = {}
 big.name = "Big Notebook"
 function big.AddPages(noteBook)
@@ -88,8 +108,9 @@ end
 -- Template Methods
 function templates.InitializeTemplates()
   templates.Register(p2g)
+  templates.Register(midsize)
   templates.Register(big)
-  templates.SetDefault(p2g)
+  templates.SetDefault(midsize)
 end
 
 function templates.Register(template)

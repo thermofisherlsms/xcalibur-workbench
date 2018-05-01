@@ -12,8 +12,8 @@
 -- FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 -- CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
--- Chromatograms.lua
--- This is a Tartare report for generating TopN and Top Speed spacing charts
+-- ChargeStates.lua
+-- This is a Tartare report for generating precursor charge state plots
 
 -- Load necessary libraries
 local tartare = require ("Tartare")
@@ -23,6 +23,7 @@ local zPane = require("zPane")
 -- Local variables
 local chargeStates = {name = "Precursor Charge State"}
 local allResults = {}
+local toolTip = [[Distribution of Charge States for MS2 Precursors]]
 
 function chargeStates.generateReport(notebook)
   -- If no results, do not make a report
@@ -32,6 +33,7 @@ function chargeStates.generateReport(notebook)
   local barPane = zPane()
   local barPage = multiPlotPage{name = "Charge",
                                 panes = {barPane}}
+  barPage.pageControl.ToolTipText = toolTip
   notebook:AddPage(barPage)
   local paneControl = barPage.paneList[1].paneControl
   paneControl.XAxis.Title.Text = "Precursor Charge State"

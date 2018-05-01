@@ -23,6 +23,7 @@ local zPane = require("zPane")
 -- Local variables
 local chromatograms = {name = "Chromatograms"}
 local allResults = {}
+local toolTip = [[Base Peak MS1 Chromatograms]]
 
 function chromatograms.generateReport(notebook)
   -- If no results, do not make a report
@@ -31,6 +32,7 @@ function chromatograms.generateReport(notebook)
   local generic = multiPlotPage{name = "Chromatogram",
                                 panes = {zPane()}}
   notebook:AddPage(generic)
+  generic.pageControl.ToolTipText = toolTip
   local pane = generic.paneList[1].paneControl
   pane.XAxis.Title.Text = "Retention Time (min)"
   pane.YAxis.Title.Text = "Intensity"

@@ -24,11 +24,14 @@ local RawFile = require("LuaRawFile")
 -- Get assemblies
 
 -- Get constructors
+local ContextMenuStrip = luanet.import_type("System.Windows.Forms.ContextMenuStrip")
 local Form = luanet.import_type("System.Windows.Forms.Form")
 local TabControl = luanet.import_type("System.Windows.Forms.TabControl")
+local ToolStripMenuItem = luanet.import_type("System.Windows.Forms.ToolStripMenuItem")
 
 -- Get enumerations
 local DockStyle = luanet.import_type("System.Windows.Forms.DockStyle")
+local MouseButtons = luanet.import_type("System.Windows.Forms.MouseButtons")
 local TabAlignment = luanet.import_type("System.Windows.Forms.TabAlignment")
 
 -- local variables
@@ -37,7 +40,10 @@ local TabAlignment = luanet.import_type("System.Windows.Forms.TabAlignment")
 local noteBookActivated, noteBookClosed
 
 -- local functions
-
+local function DeleteActivePageCB(sender, args)
+  local self = sender.Tag       -- Tag is the mdiNotebook
+  self:RemovePage(self.pageList.active)
+end
 
 -- Start of the mdiPage object
 local mdiNoteBook = {}
@@ -149,6 +155,14 @@ function mdiNoteBook:CreateForm(args)
   tabControl.Dock = DockStyle.Fill
   tabControl.Alignment = TabAlignment.Right
   tabControl.Tag = self
+  local menu = ContextMenuStrip()                           -- Get a ContextMenuStrip
+  tabControl.ContextMenuStrip = menu
+  local item = ToolStripMenuItem("Delete Active Page")      -- Get a ToolStripMenuItem
+  item.Click:Add(DeleteActivePageCB)                        -- Add a callback
+  item.Tag = self                                           -- Set tag to the page
+  menu.Items:Add(item)                                      -- Add it to the menu
+  
+
 end
 
 -- Dispose of all .NET objects
@@ -224,6 +238,21 @@ function mdiNoteBook:OpenFile(fileName)
   end
     
   return true
+end
+
+function mdiNoteBook:RemovePage(page)
+  -- This likely leaks memory associated with this page
+  -- and associated .NET objects but it shouldn't happen
+  -- too frequently, so it should be relatively safe.
+  local activeIndex
+  for pageIndex, thisPage in ipairs(self.pageList) do
+    if thisPage == page then
+      activeIndex = pageIndex
+      break
+    end
+  end
+  table.remove(self.pageList, activeIndex)
+  self.tabControl.TabPages:Remove(page.pageControl)
 end
 
 -- The following are not meant to be part of the mdiNoteBook object

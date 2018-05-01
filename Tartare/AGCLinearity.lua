@@ -12,8 +12,8 @@
 -- FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 -- CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
--- Chromatograms.lua
--- This is a Tartare report for generating Raw TIC Plots
+-- AGCLinearity.lua
+-- This is a Tartare report for generating AGC Linearity Plots
 
 -- Load necessary libraries
 local tartare = require ("Tartare")
@@ -21,13 +21,17 @@ local multiPlotPage = require("multiPlotPage")
 local zPane = require("zPane")
 
 -- Load enumerations
-local AxisType = luanet.import_type("ZedGraph.AxisType")
+local SymbolType = luanet.import_type("ZedGraph.SymbolType")
 
 -- Local variables
-local rawTICs = {name = "Raw TICs"}
+local agcLinearity = {name = "AGC Linearity"}
 local allResults = {}
+local toolTip =
+[[Raw TIC is proportional to the number of ions detected in each spectrum.
+This plot reflects the linearity of AGC with injection time]]
 
-function rawTICs.generateReport(notebook)
+
+function agcLinearity.generateReport(notebook)
   -- If no results, do not make a report
   if #allResults == 0 then return end
   
@@ -46,48 +50,44 @@ function rawTICs.generateReport(notebook)
   
   -- Create panes
   local paneTable = {}
-  for _, order in ipairs(keys) do
+  for index, order in ipairs(keys) do
     local thisPane = zPane()
     table.insert(paneTable, thisPane)
     local paneControl = thisPane.paneControl
-    paneControl.XAxis.Title.Text = "Retention Time (min)"
+    paneControl.XAxis.Title.Text = "Injection Time (msec)"
     paneControl.YAxis.Title.Text = "Raw TIC"
-    paneControl.YAxis.Type = AxisType.Log
     paneControl.Title.Text = string.format ("MS%d Raw TICs", order)
+    if index > 1 then paneControl.Legend.IsVisible = false end
   end
-  local thisPage = multiPlotPage{name = "Raw TIC", panes = paneTable}
+  local thisPage = multiPlotPage{name = "AGC Linearity", panes = paneTable}
+  thisPage.pageControl.ToolTipText = toolTip
   notebook:AddPage(thisPage)
-    
-  -- Loop across data and put into format for plotting
+  
+  -- Data must be sorted in order of injection time
+  for _, result in ipairs(allResults) do
+    table.sort(result, function(a,b) return a.it < b.it end)
+  end
+  
+  -- Now plot the data
   for index, order in ipairs(keys) do
-    local thisData = {}
-    for _, result in ipairs(allResults) do
-      local newResult = {fileName = result.fileName}
-      table.insert(thisData, newResult)
-      for _, entry in ipairs(result) do
-        if entry.n == order then
-          table.insert(newResult, {rt = entry.rt, tic = entry.tic})
-        end
-      end
-    end
-    
-    tartare.timePlot({pane = paneTable[index], data = thisData, key = "tic"})
+    tartare.averagePlot({pane = paneTable[index], data = allResults, xKey = "it", yKey = "tic",
+                        filterFunction = function(a) return a.n == order end})
   end
 end
 
-function rawTICs.processFile(rawFile, fileName, firstFile)
+function agcLinearity.processFile(rawFile, fileName, firstFile)
   if firstFile then allResults = {} end
   local thisResult = {fileName = fileName}
   -- Collect data
   for scanNumber = rawFile.FirstSpectrumNumber, rawFile.LastSpectrumNumber do
     local header = rawFile:GetScanHeader(scanNumber)
-    local it = rawFile:GetScanTrailer(scanNumber, "Ion Injection Time (ms):")
+    local injectionTime = rawFile:GetScanTrailer(scanNumber, "Ion Injection Time (ms):")
     table.insert(thisResult, {n = rawFile:GetMSNOrder(scanNumber),
-                          tic = header.TIC / (it / 1000),
-                          rt = rawFile:GetRetentionTime(scanNumber)})
+                          tic = header.TIC * injectionTime / 1000,
+                          it = injectionTime})
   end
   if #thisResult > 0 then table.insert(allResults, thisResult) end
 end
 
 -- Register this report
-tartare.register(rawTICs)
+tartare.register(agcLinearity)

@@ -22,11 +22,13 @@ local gridPage = require("gridPage")
 -- Local variables
 local general = {name = "General"}
 local allResults = {}
+local toolTip = [[General information about Raw File]]
 
 function general.generateReport(notebook)
   if #allResults == 0 then return end
   local page = gridPage{name = "General"}
   page.gridControl.RowHeadersVisible = false    -- Hide the row header
+  page.pageControl.ToolTipText = toolTip
   notebook:AddPage(page)                        -- Add the page to the notebook
   Application.DoEvents()                        -- Let windows draw the page
   
