@@ -42,7 +42,8 @@ luac.out
 # Data files
 *.raw
 
-User/*
+User/*.lua
+User/Disabled/*.lua
 Utilities/*
 ZedGraph.XML
 ZedGraph.dll
@@ -50,4 +51,3 @@ LuaInterface.dll
 CLRPackage.lua
 *.dll
 lib/LuaRawFile.lua
-User/transients.lua
