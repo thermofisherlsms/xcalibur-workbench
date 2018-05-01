@@ -42,13 +42,12 @@ luac.out
 # Data files
 *.raw
 
-User/ApexEval.lua
-User/ApexSimulations.lua
-User/Complement.lua
-User/DDStatistics.lua
-Utilities/lc.lua
-Utilities/ms.lua
+User/*
+Utilities/*
 ZedGraph.XML
 ZedGraph.dll
-User/ut_proteomeDiscoverer.lua
 LuaInterface.dll
+CLRPackage.lua
+*.dll
+lib/LuaRawFile.lua
+User/transients.lua
