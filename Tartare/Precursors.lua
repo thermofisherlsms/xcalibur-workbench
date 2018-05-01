@@ -104,6 +104,7 @@ function precursors.processFile(rawFile, rawFileName, firstFile)
   table.insert(allResults, thisResult)
   local masters = {}
   thisInformation.masters = masters
+  local continue = false
   -- Loop through scans and collect all necessary data
   for scanNumber = rawFile.FirstSpectrumNumber, rawFile.LastSpectrumNumber do
     local order = rawFile:GetMSNOrder(scanNumber)
@@ -116,10 +117,12 @@ function precursors.processFile(rawFile, rawFileName, firstFile)
       else
         table.insert(masters[masterSN], scanNumber)
       end
+      thisInformation[scanNumber] = {precursor = precursor}
+      continue = true
     end
     local thisRT = rawFile:GetRetentionTime(scanNumber)
-    thisInformation[scanNumber] = {precursor = precursor}
   end
+  if not continue then return end
   -- Extract information about isolation width from the method
   thisInformation.isolationWidths = {}
   local method = rawFile:GetInstrumentMethod(1)
