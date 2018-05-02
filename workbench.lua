@@ -46,7 +46,6 @@
 -- reason to keep it local here
 luannet = require ("luanet")
 
-
 -- Load the primary assembly here to make them available
 -- for all other items started with "require"
 luanet.load_assembly ("System.Windows.Forms")

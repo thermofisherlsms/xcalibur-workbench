@@ -86,7 +86,7 @@ local function InitializeButtons()
   okButton.Left = 25
   okButton.Width = 80
   okButton.Top = 10
-  okButton.IsDefault = true
+  --okButton.IsDefault = true
   okButton.Click:Add(OKCB)
   panel.Controls:Add(okButton)
 

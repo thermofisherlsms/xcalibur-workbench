@@ -55,7 +55,7 @@ local function InitializeButtons()
   runButton.Left = (xqlDialog.Width / 3) - runButton.Width / 2
   -- 10% up from bottom
   runButton.Top = xqlDialog.Height - 3 * runButton.Height
-  runButton.IsDefault = true
+  --runButton.IsDefault = true
   runButton.Click:Add(RunCB)
   xqlDialog.Controls:Add(runButton)
 

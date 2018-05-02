@@ -48,7 +48,4 @@ User/Complement.lua
 User/DDStatistics.lua
 Utilities/lc.lua
 Utilities/ms.lua
-ZedGraph.XML
-ZedGraph.dll
 User/ut_proteomeDiscoverer.lua
-LuaInterface.dll
