@@ -24,6 +24,7 @@ local zPane = require("zPane")
 local msnRate = {name = "MSn Rate"}
 local allResults = {}
 local allMSNOrders = {}
+local toolTip = [[Repetition Rate for MSn Spectra]]
 
 function msnRate.generateReport(notebook)
   -- Collect MSn Orders
@@ -42,13 +43,14 @@ function msnRate.generateReport(notebook)
     paneControl.XAxis.Title.Text = "Retention Time (min)"
     paneControl.YAxis.Title.Text = "Rate (Hz)"
     paneControl.Title.Text = string.format("MS%d", order)
-    
+    if index > 1 then paneControl.Legend.IsVisible = false end
   end
   local thisPage = multiPlotPage{name = "MS Rate", panes = paneList}
+  thisPage.pageControl.ToolTipText = toolTip
   notebook:AddPage(thisPage)
   
   -- Loop across data and put into format for plotting
-  -- Can't use tartare.timePlot, not obvious why, but you can probalby figure it out
+  -- Can't use tartare.averagePlot, not obvious why, but you can probalby figure it out
   local averageTime = 1
   for index, order in ipairs(orderList) do
     for fileIndex, result in ipairs(allResults) do

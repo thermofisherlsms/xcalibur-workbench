@@ -12,7 +12,7 @@
 -- FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 -- CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
--- Chromatograms.lua
+-- Spacing.lua
 -- This is a Tartare report for generating TopN and Top Speed spacing charts
 
 -- Load necessary libraries
@@ -21,7 +21,7 @@ local multiPlotPage = require("multiPlotPage")
 local zPane = require("zPane")
 
 -- Local variables
-local spacing = {name = "Scan Spacing"}
+local spacing = {name = "MS1 Spacing"}
 local allResults = {}
 
 function spacing.generateReport(notebook)
@@ -42,6 +42,7 @@ function spacing.generateReport(notebook)
   local topNPane = zPane()
   local topNPage = multiPlotPage{name = "Top N Spacing",
                                 panes = {topNPane}}
+  topNPage.pageControl.ToolTipText = [[Spacing of MS1 spectra in Precursor Count]]
   notebook:AddPage(topNPage)
   local paneControl = topNPane.paneControl
   paneControl.XAxis.Title.Text = "Top N Spacing"
@@ -53,6 +54,7 @@ function spacing.generateReport(notebook)
   local histPane = zPane()
   local histPage = multiPlotPage{name = "Top Speed",
                                 panes = {histPane}}
+  histPage.pageControl.ToolTipText = [[Spacing of MS1 spectra in Time]]
   notebook:AddPage(histPage)
   paneControl = histPane.paneControl
   paneControl.XAxis.Title.Text = "Cycle Time (sec)"

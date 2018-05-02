@@ -42,10 +42,8 @@ luac.out
 # Data files
 *.raw
 
-User/ApexEval.lua
-User/ApexSimulations.lua
-User/Complement.lua
-User/DDStatistics.lua
-Utilities/lc.lua
-Utilities/ms.lua
-User/ut_proteomeDiscoverer.lua
+User/*.lua
+User/Disabled/*.lua
+Utilities/*
+./CLRPackage.lua
+

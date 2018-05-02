@@ -12,8 +12,8 @@
 -- FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 -- CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
--- ScamOrder.lua
--- This is a Tartare report for generating scan statistics
+-- SpectrumOrder.lua
+-- This is a Tartare report for generating spectrum MSn Order plots
 
 -- Load necessary libraries
 local tartare = require ("Tartare")
@@ -21,12 +21,14 @@ local multiPlotPage = require("multiPlotPage")
 local zPane = require("zPane")
 
 -- Local variables
-local scanOrder = {name = "Scan Order"}
+local spectrumOrder = {name = "MSn Order"}
 local allResults = {}
+local toolTip = [[Number of Spectra for Each MSn Order]]
 
-function scanOrder.generateReport(notebook)
+function spectrumOrder.generateReport(notebook)
   local orderPane = zPane()
   local thisPage = multiPlotPage{name = "Scan Order", panes = {orderPane}}
+  thisPage.pageControl.ToolTipText = toolTip
   local paneControl = orderPane.paneControl
   paneControl.XAxis.Title.Text = "MS Order"
   paneControl.YAxis.Title.Text = "Count"
@@ -37,7 +39,7 @@ function scanOrder.generateReport(notebook)
   tartare.histogram{pane = orderPane, data = allResults, key = "order", seriesType = "bar", integer = true}
 end
 
-function scanOrder.processFile(rawFile, rawFileName, firstFile)
+function spectrumOrder.processFile(rawFile, rawFileName, firstFile)
   if firstFile then allResults = {} end
   -- Set up the result table for this raw file
   local thisResult = {fileName = rawFileName or string.format("File #%d", #allResults + 1)}
@@ -49,4 +51,4 @@ function scanOrder.processFile(rawFile, rawFileName, firstFile)
 end
 
 -- Register this report
-tartare.register(scanOrder)
+tartare.register(spectrumOrder)
