@@ -20,14 +20,18 @@ local tartare = require ("Tartare")
 local multiPlotPage = require("multiPlotPage")
 local zPane = require("zPane")
 
+-- Get constructors
+local barItemType = luanet.import_type("ZedGraph.BarItem")
+
 -- Local variables
-local spectrumOrder = {name = "MSn Order"}
+local msnOrder = {name = "MSn Order"}
 local allResults = {}
 local toolTip = [[Number of Spectra for Each MSn Order]]
 
-function spectrumOrder.generateReport(notebook)
+function msnOrder.generateReport(notebook)
+  if #allResults == 0 then return end
   local orderPane = zPane()
-  local thisPage = multiPlotPage{name = "Scan Order", panes = {orderPane}}
+  local thisPage = multiPlotPage{name = "MSn Order", panes = {orderPane}}
   thisPage.pageControl.ToolTipText = toolTip
   local paneControl = orderPane.paneControl
   paneControl.XAxis.Title.Text = "MS Order"
@@ -36,10 +40,15 @@ function spectrumOrder.generateReport(notebook)
   notebook:AddPage(thisPage)
   Application.DoEvents()                        -- Let windows draw the page
   
-  tartare.histogram{pane = orderPane, data = allResults, key = "order", seriesType = "bar", integer = true}
+  tartare.histogram{pane = orderPane, data = allResults, key = "order", seriesType = "bar",
+                    integer = true}
+  barItemType.CreateBarLabels(orderPane.paneControl, false, "")
+  orderPane.plotControl:AxisChange()
+  orderPane.plotControl:Invalidate()
+
 end
 
-function spectrumOrder.processFile(rawFile, rawFileName, firstFile)
+function msnOrder.processFile(rawFile, rawFileName, firstFile)
   if firstFile then allResults = {} end
   -- Set up the result table for this raw file
   local thisResult = {fileName = rawFileName or string.format("File #%d", #allResults + 1)}
@@ -51,4 +60,4 @@ function spectrumOrder.processFile(rawFile, rawFileName, firstFile)
 end
 
 -- Register this report
-tartare.register(spectrumOrder)
+tartare.register(msnOrder)

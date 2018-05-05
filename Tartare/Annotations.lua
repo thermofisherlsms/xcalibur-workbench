@@ -28,6 +28,7 @@ local allResults = {}
 local thisResult = {}
 local thisRawFile, thisRT
 local toolTip = [[Total number of Orbitrap MS1 Peaks and Isotope Clusters]]
+local instrumentType, plotClusters, extractClusters
 
 -- This is going to return bits with base-1
 -- Which may be a "bit" confusing
@@ -58,42 +59,62 @@ function annotations.generateReport(notebook)
   if not continue then return end
   
   -- Create panes
-  local clusterPane = zPane()
-  local paneControl = clusterPane.paneControl
-  paneControl.XAxis.Title.Text = "Retention Time (min)"
-  paneControl.YAxis.Title.Text = "Clusters per Spectrum"
-  paneControl.Title.Text = "MS1 Clusters"
+  local clusterPane
+  if plotClusters then
+    clusterPane = zPane()
+    local paneControl = clusterPane.paneControl
+    paneControl.XAxis.Title.Text = "Retention Time (min)"
+    paneControl.YAxis.Title.Text = "Clusters per Spectrum"
+    paneControl.Title.Text = "MS1 Clusters"
+    paneControl.Legend.IsVisible = false
+  end
   
   local peakPane = zPane()
-  paneControl = peakPane.paneControl
+  local paneControl = peakPane.paneControl
   paneControl.XAxis.Title.Text = "Retention Time (min)"
   paneControl.YAxis.Title.Text = "Peaks per Spectrum"
   paneControl.Title.Text = "MS1 Peaks"
-  paneControl.Legend.IsVisible = false
   
-  local thisPage = multiPlotPage{name = "Annotations", panes = {clusterPane, peakPane}}
+  local thisPage = multiPlotPage{name = "Annotations", panes = {peakPane, clusterPane}}
   thisPage.pageControl.ToolTipText = toolTip
   notebook:AddPage(thisPage)
-  tartare.averagePlot({pane = clusterPane, data = allResults, yKey = "clusters"})
   tartare.averagePlot({pane = peakPane, data = allResults, yKey = "peaks"})
-  
+  if plotClusters then
+    tartare.averagePlot({pane = clusterPane, data = allResults, yKey = "clusters"})
+  end
 end
 
 -- This routine only uses label data, so no processing here
 -- Just clear allResults on the first call and thisResult on each call
 function annotations.processFile(rawFile, fileName, firstFile)
-  if firstFile then allResults = {} end
+  if firstFile then
+    allResults = {}
+    plotClusters = false  -- only plot clusters for restricted instrument types
+  end
   thisResult = {fileName = fileName}
   table.insert(allResults, thisResult)
   thisRawFile = rawFile
+  instrumentType = rawFile:GetInstName()
+  if string.find(instrumentType, "Fusion") or string.find(instrumentType, "Q Exactive") then
+    plotClusters = true
+    extractClusters = true
+  else
+    tartare.reportError(string.format("Cluster annotation not supported for %s in file %s", instrumentType, fileName))
+    extractClusters = false
+  end
 end
 
 -- A cluster always has a most abundant peak labeled in the resolution
 -- by 0x4 being set
 function annotations.processLabelData(labelData, description)
+  if not extractClusters then
+    table.insert(thisResult, {rt = thisRT, peaks = #labelData})
+    return
+  end
   local clusterCount = 0
   local bits
   local remainder
+  -- Annotation of peak top only applies to QE and Fusion
   for _, peak in ipairs(labelData) do
     remainder = math.floor(peak.Resolution % 10)
     if remainder >=4 and remainder <= 7 then

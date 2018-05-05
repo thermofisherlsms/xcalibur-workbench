@@ -26,6 +26,7 @@ local allResults = {}
 local thisInformation = {}
 local thisResult = {}
 local maxOrder
+local instrumentType
 
 -- local functions
 -- Get the index of the first peak above the specified mass
@@ -48,6 +49,53 @@ local function findIndex(data, mass)
     end
     if thisIndex == stopIndex then return thisIndex end
   end
+end
+
+-- Parse instrument dependent method file to figure
+-- out the isolation widths
+local function getIsolationWidth(method, stage)
+  local function fail(errorMsg)
+    error(errorMsg or "MSn Conversion: No Method Data Available")
+  end
+  if not method then fail() end
+  local width
+  if string.find(instrumentType, "Fusion") then
+    local search = string.format("MSn Level = %d", stage)
+    local start, stop = string.find(method, search)
+    if not stop then fail("MSn Conversion: Could not find 'MSn Level' in method") end
+    stop = string.find(method, "Isolation Window = ", stop)
+    if not stop then fail("MSn Conversion: Could not find 'Isolation Window' in method") end
+    width = string.match(method, "%d[%d.]*", stop + 1)
+    if not width then fail("MSn Conversion: Could not extract width from method") end
+    width = tonumber(width)
+    if not width then fail("MSn Conversion: Could not extract width from method") end
+  elseif string.find(instrumentType, "Q Exactive") then
+    local search = "Isolation window"
+    local start, stop = string.find(method, search)
+    if not stop then fail("MSn Conversion: Could not find 'Isolation window' in method") end
+    local lineEnd = string.find(method, "\n", stop + 1)
+    local line = string.sub(method, stop + 1, lineEnd)
+    line = line:gsub("^%s*", "")  -- This trims whitespaces
+    width = string.match(line, "%d[%d.]+")
+    if not width then fail("MSn Conversion: Could not extract width from method") end
+    width = tonumber(width)
+    if not width then fail("MSn Conversion: Could not extract width from method") end
+  elseif string.find(instrumentType, "Elite") or string.find(instrumentType, "FT") then
+    local search = "Scan Event Details:"
+    local start, stop = string.find(method, search)
+    if not stop then fail("MSn Conversion: Could not find 'Scan Event Details' in method") end
+    search = "Isolation Width:"
+    start, stop = string.find(method, search, stop)
+    if not stop then fail("MSn Conversion: Could not find 'Isolation Width:' in method") end
+    local lineEnd = string.find(method, "\n", stop + 1)
+    local line = string.sub(method, stop + 1, lineEnd)
+    line = line:gsub("^%s*", "")  -- This trims whitespaces
+    width = string.match(line, "%d[%d.]+")
+    if not width then fail("MSn Conversion: Could not extract width from method") end
+    width = tonumber(width)
+    if not width then fail("MSn Conversion: Could not extract width from method") end
+  end
+  return width
 end
 
 local function getSignal(data, center, width)
@@ -116,11 +164,12 @@ end
 function msnConversion.processFile(rawFile, rawFileName, firstFile)
   -- Currently only functions for Orbitrap Fusion because I don't know the
   -- method report format for other instruments
-  if not string.find(rawFile:GetInstName(), "Fusion") then return end
+  --if not string.find(rawFile:GetInstName(), "Fusion") then return end
   
   if firstFile then
     allResults = {}
     maxOrder = 0
+    instrumentType = rawFile:GetInstName()
   end
   
   -- Set up the result table for this raw file
@@ -128,6 +177,7 @@ function msnConversion.processFile(rawFile, rawFileName, firstFile)
   thisResult = {fileName = rawFileName}         -- This will contain the results of the spectral extraction
   table.insert(allResults, thisResult)
   local masters = {}
+  local lastMaster
   thisInformation.masters = masters
   -- Loop through scans and collect all necessary data
   for scanNumber = rawFile.FirstSpectrumNumber, rawFile.LastSpectrumNumber do
@@ -135,12 +185,15 @@ function msnConversion.processFile(rawFile, rawFileName, firstFile)
     local order = rawFile:GetMSNOrder(scanNumber)
     local thisRT = rawFile:GetRetentionTime(scanNumber)
     local masterSN, precursor
-    if order > 1 then
+    if order == 1 then
+      lastMaster = scanNumber
+    elseif order > 1 then
       maxOrder = math.max(maxOrder, order)
       local thisOrder = order
-      masterSN = rawFile:GetScanTrailer(scanNumber, "Master Scan Number:")
+      -- If this trailer call returns nil, use the most recent full scan
+      masterSN = rawFile:GetScanTrailer(scanNumber, "Master Scan Number:") or lastMaster
       while thisOrder > 2 do
-        masterSN = rawFile:GetScanTrailer(masterSN, "Master Scan Number:")
+        masterSN = rawFile:GetScanTrailer(masterSN, "Master Scan Number:") or lastMaster
         thisOrder = thisOrder - 1
       end
       
@@ -157,14 +210,7 @@ function msnConversion.processFile(rawFile, rawFileName, firstFile)
   thisInformation.isolationWidths = {}
   local method = rawFile:GetInstrumentMethod(1)
   for n = 2, maxOrder do
-    local search = string.format("MSn Level = %d", n)
-    local start, stop = string.find(method, search)
-    if not stop then return end
-    stop = string.find(method, "Isolation Window = ", stop)
-    if not stop then return end
-    local width
-    width = string.match(method, "%d[%d.]*", stop + 1)
-    thisInformation.isolationWidths[n] = tonumber(width)
+    thisInformation.isolationWidths[n] = getIsolationWidth(method, n)
   end
 end
 

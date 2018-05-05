@@ -56,6 +56,9 @@ end
 -- {{a1,a2}, {b1,b2}, {c1, c2}}
 -- Must be a rectangular table
 function gridPage:Fill(data)
+  if #data < 1 then
+    data[1] = {"No Data"}
+  end
   local grid = self.gridControl
   grid.Rows:Clear()
   grid.ColumnCount = #data[1]     -- Width comes from size of first row

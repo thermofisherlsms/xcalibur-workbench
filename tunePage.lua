@@ -91,7 +91,6 @@ function tunePage:_init(args)
   grid.ColumnHeadersVisible = false
   grid.RowHeadersVisible = false
   self.rawFile = args.rawFile
-  
   if not args.skipInit then self:ShowTune() end
 end
 
@@ -112,6 +111,9 @@ function tunePage:ShowTune(args)
   end
   table.sort(sorted, function(a,b) return a[1] < b[1] end)
 
+  if #sorted == 0 then
+    sorted[1] = {"No Tune Data"}
+  end
   self:Fill(sorted)
 end
 

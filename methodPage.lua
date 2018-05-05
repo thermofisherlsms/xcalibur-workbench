@@ -58,7 +58,9 @@ function methodPage:ShowMethod(args)
   end
   local rawFile = self.rawFile
   local method = rawFile:GetInstrumentMethod(1)   -- '1' is for mass spectrometer method
-  
+  if not method or string.len(method) == 0 then
+    method = "No Method Data Available"
+  end
   self:Fill(method)
 end
 

@@ -19,6 +19,7 @@
 local RawFile = require("LuaRawFile")
 local menu = require("menu")
 local mdiNoteBook = require("mdiNoteBook")
+local textPage = require("textPage")
 
 -- Get constructors
 local Button = luanet.import_type("System.Windows.Forms.Button")
@@ -28,6 +29,8 @@ local ProgressBar = luanet.import_type("System.Windows.Forms.ProgressBar")
 local Form = luanet.import_type("System.Windows.Forms.Form")
 local Label = luanet.import_type("System.Windows.Forms.Label")
 local CheckedListBox = luanet.import_type("System.Windows.Forms.CheckedListBox")
+local MainMenu = luanet.import_type("System.Windows.Forms.MainMenu")
+local MenuItem = luanet.import_type("System.Windows.Forms.MenuItem")
 
 -- Get enumerations
 local DialogResult = luanet.import_type("System.Windows.Forms.DialogResult")
@@ -37,6 +40,7 @@ local FormStartPosition = luanet.import_type("System.Windows.Forms.FormStartPosi
 
 -- forward declarations for local functions
 local MenuCheck, ProcessList, ShowMenu, TrueFunction
+local SelectAllCB, UnselectAllCB
 
 -- Local variables
 local cycleNumber = 1
@@ -44,6 +48,7 @@ local activeReportDialog = {}
 local progressDialog = {}
 local cancelProcessing = false
 local registeredReports = {}
+local errorMessage
 
 -- Create the table for the Tartare module
 -- It has one public function, which is register()
@@ -214,6 +219,15 @@ function Tartare.register(reportTable)
   return true
 end
 
+function Tartare.reportError(newMessage)
+  print (newMessage)
+  -- Don't add a carriage return for the first error
+  if string.len(errorMessage) > 0 then
+    errorMessage = errorMessage .. "\r\n"
+  end
+  errorMessage = errorMessage .. newMessage
+end
+
 -- Reset to prior values
 local function ActiveCancelCB()
   for index, reportTable in ipairs(registeredReports) do
@@ -240,8 +254,21 @@ local function CreateActiveReportDialog()
   activeReportDialog.form = form
   form.Text = "Tartare Modules"
   form.Width = 300
-  form.Height = 400
+  form.Height = 420
   form.StartPosition = FormStartPosition.CenterScreen
+  
+  -- Add Edit menu
+  -- Attach the menu to the form
+  local formMenu = MainMenu()
+  form.Menu = formMenu
+  local editItem = MenuItem("Edit")
+  formMenu.MenuItems:Add(editItem)
+  local selectItem = MenuItem("Select All")
+  editItem.MenuItems:Add(selectItem)
+  selectItem.Click:Add(SelectAllCB)
+  local unselectItem = MenuItem("Unselect All")
+  unselectItem.Click:Add(UnselectAllCB)
+  editItem.MenuItems:Add(unselectItem)
   
   -- Add label
   local label = Label()
@@ -288,7 +315,7 @@ local function CreateProgressDialog()
   local form = Form()
   form.Text = "Tartare Progress"
   form.Width = 400
-  form.Height = 200
+  form.Height = 250
   form.ControlBox = false
   form.StartPosition = FormStartPosition.CenterScreen
   progressDialog.form = form
@@ -297,8 +324,8 @@ local function CreateProgressDialog()
   local fileLabel = Label()
   fileLabel.Parent = form
   fileLabel.Left = 0
-  fileLabel.Top = 10
-  fileLabel.Height = 20
+  fileLabel.Top = 20
+  fileLabel.Height = 40
   fileLabel.Width = form.Width
   fileLabel.TextAlign = ContentAlignment.MiddleCenter
   progressDialog.fileLabel = fileLabel
@@ -307,7 +334,7 @@ local function CreateProgressDialog()
   local processLabel = Label()
   processLabel.Parent = form
   processLabel.Left = 0
-  processLabel.Top = 30
+  processLabel.Top = 70
   processLabel.Height = 20
   processLabel.Width = form.Width
   processLabel.TextAlign = ContentAlignment.MiddleCenter
@@ -321,7 +348,7 @@ local function CreateProgressDialog()
   bar.Step = 1
   bar.Height = 50
   bar.Width = 300
-  bar.Top = 60
+  bar.Top = 90
   bar.Left = 50
   bar.Style = ProgressBarStyle.Continuous
   progressDialog.bar = bar
@@ -331,7 +358,7 @@ local function CreateProgressDialog()
   cancelButton.Text = "Cancel"
   cancelButton.Left = 160
   cancelButton.Width = 80
-  cancelButton.Top = 120
+  cancelButton.Top = 150
   cancelButton.Click:Add(CancelCB)
   cancelButton.Parent = form
 end
@@ -395,6 +422,8 @@ function ProcessList(list)
   progressDialog.bar.Maximum = processSteps
   progressDialog.bar.Value = 0
   Application.DoEvents()
+  -- Clear past error messages
+  errorMessage = ""
   
   -- Process the files
   for fileIndex, item in ipairs(list) do
@@ -435,7 +464,13 @@ function ProcessList(list)
       step = step + 1
       progressDialog.processLabel.Text = processText
       Application.DoEvents()
-      report.processFile(item.rawFileObject, shortFileName, fileIndex == 1)
+      -- Pcall the processing function, since we don't trust the creator
+      local processPcall, errorMessage =  pcall(
+            function() report.processFile(item.rawFileObject, shortFileName, fileIndex == 1) end)
+      if not processPcall then
+        Tartare.reportError(string.format("processFile() for %s failed on %s", report.name, shortFileName))
+        Tartare.reportError (errorMessage)
+      end
       progressDialog.bar:PerformStep()
       Application.DoEvents()
       if cancelProcessing then break end
@@ -463,14 +498,33 @@ function ProcessList(list)
         description.order = rf:GetMSNOrder(scanNumber)
         description.filter = rf:GetScanFilter(scanNumber)
         for _, report in ipairs(spectrumReports) do
-          if report.wantsSpectrum and report.wantsSpectrum(description) then
-            if not spectrum then spectrum = rf.GetSpectrum(scanNumber) end
-            if spectrum then report.processSpectrum(spectrum, description) end
+          -- Pcall the processing functions, since we don't trust the creator
+          if report.wantsSpectrum then
+            local wantPcall, errorMsg =  pcall(
+              function()
+                if report.wantsSpectrum(description) then
+                  if not spectrum then spectrum = rf.GetSpectrum(scanNumber) end
+                  if spectrum then report.processSpectrum(spectrum, description) end
+                end
+              end)
+            if not wantPcall then
+              Tartare.reportError (string.forrmat("Spectral processing failed for %s", report.name))
+              Tartare.reportError (errorMsg)
+            end
           end
           -- Now repeat for label data
-          if report.wantsLabelData and report.wantsLabelData(description) then
-            if not labelData then labelData = rf:GetLabelData(scanNumber) end
-            if labelData then report.processLabelData(labelData, description) end
+          if report.wantsLabelData then
+            local wantPcall, errorMsg = pcall(
+              function()
+                if report.wantsLabelData(description) then
+                  if not labelData then labelData = rf:GetLabelData(scanNumber) end
+                  if labelData then report.processLabelData(labelData, description) end
+                end
+              end)
+            if not wantPcall then
+              Tartare.reportError (string.format("Label Data processing failed for %s", report.name))
+              Tartare.reportError (errorMsg)
+            end
           end
         end
       end
@@ -495,13 +549,36 @@ function ProcessList(list)
   local resultNotebook = mdiNoteBook({title = string.format("Tartare #%d", cycleNumber)})
   resultNotebook.tabControl.ShowToolTips = true
   cycleNumber = cycleNumber + 1
-  for _, report in ipairs(registeredReports) do
-    report.generateReport(resultNotebook)
+  for _, report in ipairs(activeReports) do
+    local result, errorMsg = pcall(
+      function()
+        report.generateReport(resultNotebook)
+      end)
+    if not result then
+      Tartare.reportError (string.format("Report Generation failed for %s", report.name))
+      Tartare.reportError (errorMsg)
+    end
   end
+  
+  -- Display error messages if any generated
+  if string.len(errorMessage) > 0 then
+    local errorPage = textPage({name = "Tartare Errors"})
+    resultNotebook:AddPage(errorPage)
+    errorPage:Fill(errorMessage)
+  end
+    
   local runTime = os.time() - startTime
   print (string.format("Run time (sec): %0.1f", runTime))
 end
 
+-- This has a forward declaration
+function SelectAllCB()
+  local listBox = activeReportDialog.listBox
+  local items = listBox.Items
+  for i = 0, items.Count - 1 do
+    listBox:SetItemChecked(i, true)
+  end
+end
 
 local function ShowDialog()
   activeReportDialog.form:Show()
@@ -520,6 +597,15 @@ end
 -- This function has a forward declaration
 function TrueFunction()
   return true
+end
+
+-- This has a forward declaration
+function UnselectAllCB()
+  local listBox = activeReportDialog.listBox
+  local items = listBox.Items
+  for i = 0, items.Count - 1 do
+    listBox:SetItemChecked(i, false)
+  end
 end
 
 CreateActiveReportDialog()

@@ -27,6 +27,7 @@ local allMSNOrders = {}
 local toolTip = [[Repetition Rate for MSn Spectra]]
 
 function msnRate.generateReport(notebook)
+  if #allResults == 0 then return end
   -- Collect MSn Orders
   local orderList = {}
   for key, _ in pairs(allMSNOrders) do
@@ -45,7 +46,7 @@ function msnRate.generateReport(notebook)
     paneControl.Title.Text = string.format("MS%d", order)
     if index > 1 then paneControl.Legend.IsVisible = false end
   end
-  local thisPage = multiPlotPage{name = "MS Rate", panes = paneList}
+  local thisPage = multiPlotPage{name = "MSn Rate", panes = paneList}
   thisPage.pageControl.ToolTipText = toolTip
   notebook:AddPage(thisPage)
   
@@ -87,7 +88,6 @@ function msnRate.processFile(rawFile, rawFileName, firstFile)
   end
   -- Set up the result table for this raw file
   local thisResult = {fileName = rawFileName or string.format("File #%d", #allResults + 1)}
-  table.insert(allResults, thisResult)
   local lastRT = {}
   -- Loop through scans and collect all necessary data
   for scanNumber = rawFile.FirstSpectrumNumber, rawFile.LastSpectrumNumber do
@@ -96,6 +96,7 @@ function msnRate.processFile(rawFile, rawFileName, firstFile)
     local thisRT = rawFile:GetRetentionTime(scanNumber)
     table.insert(thisResult, {n = order, rt = thisRT})
   end
+  if #thisResult > 0 then table.insert(allResults, thisResult) end
 end
 
 -- Register this report

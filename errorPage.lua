@@ -58,12 +58,16 @@ function errorPage:ShowErrorLog(args)
   end
   local rawFile = self.rawFile
   local errorCount = rawFile:GetNumErrorLog()
-  local errorLog = ""
-  for i = 0, errorCount - 1 do
-    local errorItem = rawFile:GetErrorLogItem(i)
-    errorLog = errorLog .. rawFile:GetErrorLogItem(i) .. "\r\n"
+  local errorLog
+  if errorCount == 0 then
+    errorLog = "No Errors Recorded"
+  else
+    errorLog = ""
+    for i = 0, errorCount - 1 do
+      local errorItem = rawFile:GetErrorLogItem(i)
+      errorLog = errorLog .. rawFile:GetErrorLogItem(i) .. "\r\n"
+    end
   end
-  
   self:Fill(errorLog)
 end
 
