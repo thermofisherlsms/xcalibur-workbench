@@ -31,7 +31,6 @@ local toolTip = [[Comparing tune data differences]]
 function tuneDiff.diff(report1,report2)
     
     local diffTable = {}
-    
     local keysFound = {}
     
     --loop through all the items in report 1 first, looking to see if any match in report 2
@@ -193,6 +192,9 @@ function tuneDiff.processFile(rawFile, rawFileName, firstFile)
   table.insert(thisResult, {label = "Raw File", value = rawFileName})
   table.insert(allResults, thisResult)
 end
-tuneDiff.enabled = true
+
+--disable by default
+tuneDiff.enabled = false
+
 -- Register this report
 tartare.register(tuneDiff)
