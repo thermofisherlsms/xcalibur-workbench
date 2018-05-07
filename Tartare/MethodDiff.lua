@@ -62,7 +62,7 @@ function methodDiff.generateReport(notebook)
       local diffResult = diff.diff(methodReports[1],methodReports[2],'\n')
       
       -- format the diff as HTML
-      diffString = diff.format_as_html(diffResult)
+      diffHTMLTable = diff.format_as_html(diffResult)
       
       --the style headers
       local styles = [[
@@ -80,17 +80,26 @@ function methodDiff.generateReport(notebook)
         </style>
       ]]
       
+      local diffHTML = {}
+      
       -- start the HTML string that we'll build up
-      local diffHTML = [[<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">]]..'<html><head>'..styles..'</head><body><table width="100%" cellspacing="0" cellpadding="0"><tr>'
+      table.insert(diffHTML,
+        [[<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">]])
+      table.insert(diffHTML, '<html><head>'..styles..'</head><body>')
+      table.insert(diffHTML, '<table width="100%" cellspacing="0" cellpadding="0"><tr>')
       
       --add cells for the two filenames
       for _,name in ipairs(fileNames) do
-         diffHTML = diffHTML..'<th width="50%">'..name..'</th>'
+         table.insert(diffHTML, '<th width="50%">'..name..'</th>')
       end 
       
-      diffHTML = diffHTML .. '</tr></table>'..diffString..'</body></html>'
-      page:Fill(diffHTML)
+      table.insert(diffHTML, '</tr></table>')
+      for i=1,#diffHTMLTable do
+         table.insert(diffHTML, diffHTMLTable[i]) 
+      end
+      table.insert(diffHTML, '</body></html>')
+      page:Fill(table.concat(diffHTML))
     
     end
   

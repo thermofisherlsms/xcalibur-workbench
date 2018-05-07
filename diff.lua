@@ -106,67 +106,68 @@ end
 
 
 -----------------------------------------------------------------------------
--- Formats an inline diff as HTML, with <ins> and <del> tags.
+-- Formats an a diff into a table of HTML tags for subsequent rendering.
 -- 
 -- @param tokens         a table of {token, status} pairs.
--- @return               an HTML string.
+-- @return               a Lua table of HTML strings for rendering via table.concat()
 -----------------------------------------------------------------------------
 function format_as_html(tokens)
-   local diff_buffer = ""
-   local token, status
-   diff_buffer = '<table width="100%" cellspacing="0" cellpadding="0">'
-   local prev_field = ''
-   local prev_status = ''
-   for i, token_record in ipairs(tokens) do
+    local diff_buffer = ""
+    local token, status
+    diff_buffer = {}
+    table.insert(diff_buffer, '<table width="100%" cellspacing="0" cellpadding="0">')
+    local prev_field = ''
+    local prev_status = ''
+    for i, token_record in ipairs(tokens) do
       
       token = escape_html(token_record[1])
       status = token_record[2]
       
-      --diff_buffer = diff_buffer .. "<tr>"
       if token ~= '' and token ~= nil and token ~= "\n" and token ~= "\r" then
       if status == "in" then
          --if the previous status was also "in", we just need to append the item and not close the cell
          if prev_status == "in" then
-             diff_buffer = diff_buffer .. "<ins>"..token.."</ins>"
+           table.insert(diff_buffer, "<ins>"..token.."</ins>")
          --if the previous status was "out", we need to close the old cell, create a new cell and add the content
          elseif prev_status == "out" then
-             diff_buffer = diff_buffer .. "</td><td class='in' valign='top' width='50%'><ins>"..token.."</ins>"
+           table.insert(diff_buffer, "</td><td class='in' valign='top' width='50%'><ins>"..token.."</ins>")
          --if the previous status was "same", we need to add a new row with a blank first cell and start the second cell
          elseif prev_status == "same" then
-            diff_buffer = diff_buffer .. "<tr><td class='empty'>&nbsp;</td><td class='in' valign='top' width='50%'><ins>"..token.."</ins>"
+           table.insert(diff_buffer, "<tr><td class='empty'>&nbsp;</td><td class='in' valign='top' width='50%'><ins>"..token.."</ins>")
          end
       
       elseif status == "out" then
         --if the previous status was also "out", we just need to append the item and not close the cell
         if prev_status == "out" then
-           diff_buffer = diff_buffer .. "<del>"..token.."</del>"
+          table.insert(diff_buffer, "<del>"..token.."</del>")
         --if the previous cell was "in", then we need to close the old cell/row and create a new row and cell
         elseif prev_status == "in" then
-          diff_buffer = diff_buffer .. "</td></tr><tr><td class='out' valign='top' width='50%'><del>"..token.."</del>"
+          table.insert(diff_buffer, "</td></tr><tr><td class='out' valign='top' width='50%'><del>"..token.."</del>")
         --if the previous status was "same", we need to add a new row and populate its first cell
         elseif prev_status == "same" then
-          diff_buffer = diff_buffer .. "<tr><td class='out' valign='top' width='50%'><del>"..token.."</del>"
+          table.insert(diff_buffer, "<tr><td class='out' valign='top' width='50%'><del>"..token.."</del>")
         end
       
       elseif status == "same" then
         --if the previous cell was "out", we need to close the first cell, add a second blank cell and then close the previous row
         if prev_status == "out" then
-           diff_buffer = diff_buffer .. "</td><td class='empty'>&nbsp;</td></tr><tr><td class='same' width='50%'>"..token.."</td><td class='same' width='50%'>"..token.."</td></tr>"
+          table.insert(diff_buffer, "</td><td class='empty'>&nbsp;</td></tr><tr><td class='same' width='50%'>"..token.."</td><td class='same' width='50%'>"..token.."</td></tr>")
         --if the previous cell was "in", then we need to close its cell/row and add our new row
         elseif prev_status == "in" then
-          diff_buffer = diff_buffer .. "</td></tr><tr><td class='same' width='50%'>"..token.."</td><td class='same' width='50%'>"..token.."</td></tr>"
+          table.insert(diff_buffer, "</td></tr><tr><td class='same' width='50%'>"..token.."</td><td class='same' width='50%'>"..token.."</td></tr>")
         --if the previous status was "same", just add another row
         elseif prev_status == "same" then
-          diff_buffer = diff_buffer.."<tr><td class='same' width='50%'>"..token.."</td><td class='same' width='50%'>"..token.."</td></tr>"
+          table.insert(diff_buffer, "<tr><td class='same' width='50%'>"..token.."</td><td class='same' width='50%'>"..token.."</td></tr>")
         end
       end
       
       --diff_buffer = diff_buffer .. "</tr>"
-        prev_status = status
-        end
-   end
-   diff_buffer = diff_buffer .. "</table>"
-   return diff_buffer
+      prev_status = status
+    end
+  
+    end
+    table.insert(diff_buffer, "</table>")
+    return diff_buffer
 end
 
 

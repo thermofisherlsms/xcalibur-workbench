@@ -32,6 +32,7 @@ function tuneDiff.diff(report1,report2)
     
     local diffTable = {}
     local keysFound = {}
+    local numDifferences = 0
     
     --loop through all the items in report 1 first, looking to see if any match in report 2
     for k,v in pairs(report1) do
@@ -45,6 +46,7 @@ function tuneDiff.diff(report1,report2)
           result.value2 = ''
           result.class1 = 'in'
           result.class2 = 'out'
+          numDifferences = numDifferences + 1
         elseif report1[k] == report2[k] then
           result.status = 'same'
           result.value2 = report2[k]
@@ -55,6 +57,7 @@ function tuneDiff.diff(report1,report2)
           result.value2 = report2[k]
           result.class1 = 'out'
           result.class2 = 'in'
+          numDifferences = numDifferences + 1
         end
         
         diffTable[k] = result
@@ -73,11 +76,12 @@ function tuneDiff.diff(report1,report2)
             result.class1 = 'out'
             result.class2 = 'in'
             diffTable[k] = result
+            numDifferences = numDifferences + 1
         end
        
     end
     
-    return diffTable
+    return diffTable, numDifferences
     
 end
 
@@ -97,15 +101,18 @@ function pairsByKeys (t, f)
       return iter
     end
 
---format the contents of the Lua table as an HTML table
+--format the contents of the Lua table as HTML tags, and return in a Lua table
 function tuneDiff.formatTable(results)
-    local output = '<table cellspacing="0" cellpadding="0">'
+    local output = {}
+    table.insert(output, '<table cellspacing="0" cellpadding="0">')
     
     for k,v in pairsByKeys(results) do
-        output = output .. '<tr><td class="key" width="33%">'..k..'</td><td class="'..v.class1..'" width="33%">'..v.value1..'</td><td class="'..v.class2..'" width="33%">'..v.value2..'</td></tr>'
+        table.insert(output, '<tr><td class="key" width="33%">'..k..'</td>')
+        table.insert(output, '<td class="'..v.class1..'" width="33%">'..v.value1..'</td>')
+        table.insert(output, '<td class="'..v.class2..'" width="33%">'..v.value2..'</td></tr>')
     end
     
-    output = output .. '</table>'
+    table.insert(output, '</table>')
     
     return output
     
@@ -142,13 +149,13 @@ function tuneDiff.generateReport(notebook)
       table.insert(fileNames,allResults[1+i][2]['value'])
       
       --perform the diff on the two tables
-      local diffResult = tuneDiff.diff(tuneReports[1],tuneReports[2])
+      local diffResult, numDifferences = tuneDiff.diff(tuneReports[1],tuneReports[2])
       
       --format the output as HTML
       local diffHTMLTable = tuneDiff.formatTable(diffResult)
       
       --the style headers
-        local styles = [[
+      local styles = [[
         <style type='text/css'>
             body{font-family: sans-serif;font-size: 0.9em;}
             ins,del{display:block;}
@@ -164,17 +171,27 @@ function tuneDiff.generateReport(notebook)
       ]]
       
       -- start the HTML string that we'll build up and eventually return as the page's content
-      local diffHTML = [[<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">]]..
-'<html><head>'..styles..'</head><body><table width="100%" cellspacing="0" cellpadding="0"><tr><th width="33%">Key</th>'
+      local diffHTML = {}
+      table.insert(diffHTML,[[
+      <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">]])
+      table.insert(diffHTML, '<html><head>'..styles..'</head>')
+      table.insert(diffHTML, '<body>')
+      table.insert(diffHTML, '<h3>'..numDifferences..' Differences Found:</h3>')
+      table.insert(diffHTML, '<table width="100%" cellspacing="0" cellpadding="0"><tr><th width="33%">Key</th>')
       
       --add cells for the two filenames
       for _,name in ipairs(fileNames) do
-         diffHTML = diffHTML..'<th width="33%">'..name..'</th>'
+         table.insert(diffHTML, '<th width="33%">'..name..'</th>')
       end 
       
-      diffHTML = diffHTML .. '</tr></table>'..diffHTMLTable..'</body></html>'
-      page:Fill(diffHTML)
+      table.insert(diffHTML, '</tr></table>')
+      for i=1,#diffHTMLTable do
+        table.insert(diffHTML,diffHTMLTable[i])
+      end
+      
+      table.insert(diffHTML, '</body></html>')
+      page:Fill(table.concat(diffHTML))
     
     end
   
