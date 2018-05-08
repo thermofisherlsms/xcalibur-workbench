@@ -73,7 +73,7 @@ function methodDiff.generateReport(notebook)
             td{word-wrap:break-word}
             td.empty{background-color:#ccc;}
             ins,td.in{background-color:#a6dbab;color:#115617;text-decoration:none}
-            del,td.out{background-color:#e89b9b;color:#510e0e}
+            del,td.out{background-color:#e89b9b;color:#510e0e;text-decoration:none}
             td.same, td.key{background-color:#eee;}
             tr th{text-align:left;background: #333;color: #fff;padding: 0.25em;}
             td { border-bottom:1px solid #444;padding: 0.25em;}
