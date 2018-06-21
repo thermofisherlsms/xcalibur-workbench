@@ -208,7 +208,7 @@ function msnConversion.processFile(rawFile, rawFileName, firstFile)
   end
   -- Extract information about isolation width from the method
   thisInformation.isolationWidths = {}
-  local method = rawFile:GetInstrumentMethod(1)
+  local method = rawFile:GetMSInstrumentMethod()
   for n = 2, maxOrder do
     thisInformation.isolationWidths[n] = getIsolationWidth(method, n)
   end

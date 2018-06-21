@@ -125,7 +125,7 @@ function precursors.processFile(rawFile, rawFileName, firstFile)
   if not continue then return end
   -- Extract information about isolation width from the method
   thisInformation.isolationWidths = {}
-  local method = rawFile:GetMSInstrumentMethod()
+  local method = rawFile:GetInstrumentMethod(2)
   for n = 2, 2 do
     local search = string.format("MSn Level = %d", n)
     local start, stop = string.find(method, search)

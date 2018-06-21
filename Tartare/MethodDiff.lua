@@ -111,7 +111,7 @@ function methodDiff.processFile(rawFile, rawFileName, firstFile)
   if firstFile then allResults = {} end
   -- Set up the result table for this raw file
   local thisResult = {}
-  local instrumentMethod = rawFile:GetInstrumentMethod(1)
+  local instrumentMethod = rawFile:GetMSInstrumentMethod()
 
   table.insert(thisResult, {label = "Instrument Method", value = instrumentMethod})
   table.insert(thisResult, {label = "Raw File", value = rawFileName})

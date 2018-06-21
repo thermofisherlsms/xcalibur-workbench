@@ -22,7 +22,7 @@ local function GetMethodParameterBelow(rawFile, below, label, partial)
     print ("Usage: GetMethodParameterBelow(rawFile, belowTable, label)")
     return nil
   end
-  local l_method = rawFile:GetMSInstrumentMethod()     -- Get the MS method
+  local l_method = rawFile:GetInstrumentMethod(1)     -- Get the method, base zero
   local l_start, l_end
   for _, value in ipairs(below) do
     l_start, l_end = l_method:find(escape(value), l_end)      -- Find the below string
@@ -127,7 +127,7 @@ end
 --]]
 function rawFileMT:GetArrayOfMethodMatches( pattern, converter )
 	local matches = {}
-    for mch in string.gmatch(self:GetMSInstrumentMethod(), pattern) do
+	for mch in string.gmatch(self:GetInstrumentMethod(1), pattern) do
 		table.insert(matches, converter(mch))
 	end	
 	return matches
@@ -210,27 +210,6 @@ end
 function rawFileMT:IsMSNScan(sn)
 	-- this is the characters ms then a number, then a space
 	return string.match( self:GetScanFilter(sn), "ms%d")
-end
-
---table of method "names" that can be found on MS-specific methods
---used to differentiate MS methods, from other types (e.g. LC)
-local MSMethodNames = {
-        ["TNG-Calcium"] = 1,
-    }
-
---raw files can have multiple method reports within them (e.g. LC and MS)
---this function finds the method corresponding to the MS and returns it
-function rawFileMT:GetMSInstrumentMethod()
-    --get table of instrument "names" that we will search through
-    local names = self:GetInstrumentMethodNames()
-    methodIndex = nil
-    for i=1,self:GetNumberOfInstrumentMethods() do
-        local name = names[i]
-        if MSMethodNames[name] == 1 then
-           methodIndex = i
-        end
-    end
-    return self:GetInstrumentMethod(methodIndex)
 end
 
 return RawFile
