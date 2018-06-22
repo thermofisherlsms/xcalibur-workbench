@@ -18,7 +18,6 @@
 -- Drag and drop of raw files
 -- Tab Control Context Menu
 --  New Page with type selector
---  Delete Page
 --  Split Notebook and Flip page
 --  Tear out to its own Notebook
 --  Bind to a Notebook
@@ -31,7 +30,6 @@
 -- Copy Lua command history to configuration file.
 -- Clean up crash on close for LFW interpretter
 -- headerPage
---  Make filter option functional
 --  Respond to arrow keys to move scan number
 --    This conflicts with normal use of arrow keys
 -- properties
@@ -58,6 +56,7 @@ local mdiNoteBook = require("mdiNoteBook")
 local properties = require("properties")
 
 -- Get assemblies
+luanet.load_assembly("System.Drawing")
 
 -- Get constructors
 local Form = luanet.import_type("System.Windows.Forms.Form")
@@ -66,6 +65,8 @@ local Panel = luanet.import_type("System.Windows.Forms.Panel")
 local Button = luanet.import_type("System.Windows.Forms.Button")
 local OpenDialog = luanet.import_type("System.Windows.Forms.OpenFileDialog")
 local Screen = luanet.import_type("System.Windows.Forms.Screen")
+local Label = luanet.import_type("System.Windows.Forms.Label")
+local Font = luanet.import_type("System.Drawing.Font")
 
 -- Get enumerations
 local AnchorStyle = luanet.import_type("System.Windows.Forms.AnchorStyles")
@@ -75,16 +76,72 @@ local DialogResult = luanet.import_type("System.Windows.Forms.DialogResult")  --
 local MdiLayout = luanet.import_type("System.Windows.Forms.MdiLayout")
 local Shortcut = luanet.import_type("System.Windows.Forms.Shortcut")
 local FormStartPosition = luanet.import_type("System.Windows.Forms.FormStartPosition")
+local FormBorderStyle = luanet.import_type("System.Windows.Forms.FormBorderStyle")
+local ContentAlignment = luanet.import_type("System.Drawing.ContentAlignment")
 
 -- local variables
-local comboBox
+local comboBox, aboutForm
 
 -- Forward declarations for local helper functions
-local RunCommandCB
+local OKCB, RunCommandCB
 local TileHorizontalCB, TileVerticalCB
 local UndoCB
 
 -- local functions
+local function AboutBoxSetup()
+  local version
+  if type(jit) == "table" then
+    version = jit.version
+  else
+    version = _VERSION
+  end
+
+  aboutForm = Form()
+  aboutForm.Text = "About Xcalibur Workbench"
+  aboutForm.Width = 400
+  aboutForm.Height = 250
+  aboutForm.ControlBox = false
+  aboutForm.StartPosition = FormStartPosition.CenterScreen
+  aboutForm.FormBorderStyle = FormBorderStyle.FixedSingle
+  
+  -- Add main label
+  local mainLabel = Label()
+  mainLabel.Parent = aboutForm
+  mainLabel.Left = 0
+  mainLabel.Top = 20
+  mainLabel.Height = 100
+  mainLabel.Width = aboutForm.Width
+  mainLabel.TextAlign = ContentAlignment.MiddleCenter
+  --mainLabel.FontHeight = 40
+  mainLabel.Font = Font("Arial", 20)
+  mainLabel.Text =
+  [[Xcalibur Workbench
+  Copyright 2016-2018
+  Thermo Fisher Scientific]]
+  
+  -- Add version label
+  local versionLabel = Label()
+  versionLabel.Parent = aboutForm
+  versionLabel.Left = 0
+  versionLabel.Top = 120
+  versionLabel.Height = 40
+  versionLabel.Width = aboutForm.Width
+  versionLabel.TextAlign = ContentAlignment.MiddleCenter
+  versionLabel.Text = "Running using " .. version
+  
+  -- Add OK Button
+  local OKButton = Button()
+  OKButton.Text = "OK"
+  OKButton.Top = 175
+  OKButton.Left = 175
+  OKButton.Click:Add(OKCB)
+  aboutForm.Controls:Add(OKButton)
+end
+
+local function AboutCB(sender, args)
+    aboutForm:Show()
+end
+
 local function AddCommandBar()
   local panel = Panel()
   panel.Dock = DockStyle.Bottom
@@ -188,6 +245,11 @@ local function LoadOtherFiles(directory)
   end
 end
 
+-- This has a forward declaration
+function OKCB(sender, args)
+  aboutForm:Hide()
+end
+
 local function OpenCB(sender, args)
   local dialog = OpenDialog()                                         -- Create the dialog
   dialog.Filter = "Raw files (*.raw)|*.raw|All files (*.*)|*.*"       -- Set the filter
@@ -270,6 +332,10 @@ local function SetUpMenu()
   menu.AddMenu({name = "Tile Horizontal", parentName = "Windows", callBack = TileHorizontalCB})
   menu.AddMenu({name = "Tile Vertical", parentName = "Windows", callBack = TileVerticalCB})
   menu.AddMenu({name = "Sep3", label = "-", parentName = "Windows"})
+  
+  -- Add menu items to Help
+  menu.AddMenu({name = "About...", parentName = "Help", callBack = AboutCB})
+  
 end
 
 -- This has a forward declaration
@@ -313,6 +379,9 @@ mainForm.Height = workingArea.Height * 0.8
 mainForm.Width = workingArea.Width * 0.8
 
 AddCommandBar()
+AboutBoxSetup()
+
+
 -- Users can load the utilities with require()
 -- This will make sure they are found by the search path
 package.path = package.path .. ";".. configure.utilityDirectory .. "/?.lua"
