@@ -29,11 +29,23 @@ local DialogResult = luanet.import_type("System.Windows.Forms.DialogResult")
 -- local variables
 local menu = {}
 local itemList = {}               -- List of items on the menu
+local callBackList = {}           -- List of callbacks
 menu.mainMenu = MainMenu()        -- Create a new main menu
 
 -- Forward declarations for local helper functions
 
 -- local functions
+local function runCallBack(sender)
+  local callBack = callBackList[sender.Tag]
+  if not callBack then
+    print ("No callback found for menuItem ", sender)
+    return
+  end
+  local status, err = xpcall(callBack, debug.traceback)
+  if not status then
+    print (err)
+  end
+end
 
 -- Global variables
 
@@ -78,9 +90,15 @@ function menu.AddMenu(args)
   
   local menuItem = MenuItem(args.label)                           -- Get a new MenuItem
   menuItem.Name = args.name                                       -- Set it's name
-  if args.callBack then menuItem.Click:Add(args.callBack) end     -- Set callback if supplied
   if args.shortCut then menuItem.Shortcut = args.shortCut end     -- Set shortcut if supplied
   itemList[args.name] = menuItem                                  -- Add item to our list for easy search
+--if args.callBack then menuItem.Click:Add(args.callBack) end     -- Set callback if supplied
+  if args.callBack then
+    menuItem.Click:Add(runCallBack)                                 -- All menu items use same callback function
+    table.insert(callBackList, args.callBack)                       -- Add item to callback list
+    menuItem.Tag = #callBackList                                    -- Add Tag so we can find proper callback
+  end
+  
   if menuIndex then
     parent.MenuItems:Add(menuIndex, menuItem)
   else
